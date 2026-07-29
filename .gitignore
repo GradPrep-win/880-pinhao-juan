@@ -7,7 +7,8 @@ dist-app/
 app.asar
 app.asar.unpacked/
 
-# SQLite 临时文件
+# SQLite 数据库（含用户组卷/方案，不入库；本地用 parse-md.mjs 重建）
+data.db
 data.db-shm
 data.db-wal
 

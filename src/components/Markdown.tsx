@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -18,6 +19,26 @@ function stripWatermark(content: string): string {
     .trim();
 }
 
+/** 本地配图组件：把 local:qN 转成 base64 dataURL 渲染 */
+function LocalQImg({ qid }: { qid: number }) {
+  const [src, setSrc] = useState<string>("");
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await window.electronAPI?.questionImage(qid);
+        if (alive && r?.ok) setSrc(r.data);
+        else if (alive) setErr(true);
+      } catch { if (alive) setErr(true); }
+    })();
+    return () => { alive = false; };
+  }, [qid]);
+  if (src) return <img src={src} alt={`配图 q${qid}`} className="md-local-img" />;
+  if (err) return <span className="md-img-err">[配图 q${qid} 加载失败]</span>;
+  return <span className="md-img-loading">[配图加载中…]</span>;
+}
+
 export default function Markdown({ content }: { content: string }) {
   const cleaned = stripWatermark(content || "");
   return (
@@ -27,6 +48,12 @@ export default function Markdown({ content }: { content: string }) {
         rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={{
           img({ node, ...props }) {
+            const src = (props as { src?: string }).src || "";
+            // 本地题目配图：local:q{N}
+            const m = src.match(/^local:q(\d+)$/);
+            if (m) {
+              return <LocalQImg qid={Number(m[1])} />;
+            }
             return (
               <img
                 {...props}
