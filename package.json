@@ -1,0 +1,63 @@
+{
+  "name": "gradprep",
+  "version": "1.0.0",
+  "description": "GradPrep 考研智能组卷系统(只保留组卷精简版)",
+  "type": "commonjs",
+  "main": "electron-main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build:web": "vite build",
+    "start:electron": "electron .",
+    "dist": "vite build && electron-builder",
+    "postinstall": "node scripts/use-electron-sqlite.cjs",
+    "use-electron-sqlite": "node scripts/use-electron-sqlite.cjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "katex": "^0.16.47",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-markdown": "^9.1.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8",
+    "vite": "^6.4.3"
+  },
+  "build": {
+    "appId": "com.gradprep.app",
+    "productName": "GradPrep",
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs",
+      "node_modules/**",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "preload.cjs",
+        "to": "preload.cjs"
+      },
+      {
+        "from": "data.db",
+        "to": "data.db"
+      }
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "GradPrep.exe"
+    },
+    "npmRebuild": false,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ]
+  }
+}

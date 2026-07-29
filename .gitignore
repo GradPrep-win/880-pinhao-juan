@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+
+# 构建输出
+dist/
+dist-app/
+app.asar
+app.asar.unpacked/
+
+# SQLite 临时文件
+data.db-shm
+data.db-wal
+
+# 日志
+*.log
+
+# Claude Code
+.claude/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 截图（大文件）
+screenshot.png
