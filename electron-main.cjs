@@ -212,22 +212,34 @@ ipcMain.handle('db-api', (e, method, params) => {
 function findQImg(qid) {
   const d = getAppDir();
   const candidates = [
+    path.join(d, '_qimgs', `q${qid}.png`),
     path.join(d, 'resources', '_qimgs', `q${qid}.png`),
     path.join(d, 'resources', 'resources', '_qimgs', `q${qid}.png`),
     path.join(__dirname, 'resources', '_qimgs', `q${qid}.png`),
+    path.join(__dirname, '_qimgs', `q${qid}.png`),
   ];
-  for (const c of candidates) if (fs.existsSync(c)) return c;
+  for (const c of candidates) {
+    const ok = fs.existsSync(c);
+    console.log(`[qimg] q${qid} try ${c} -> ${ok}`);
+    if (ok) return c;
+  }
   return null;
+}
+function qimgLog(msg) {
+  try { fs.appendFileSync(path.join(getAppDir(), '_qimg_debug.log'), `[${new Date().toISOString()}] ${msg}\n'); } catch {}
 }
 ipcMain.handle('question-image', (e, qid) => {
   try {
+    qimgLog(`handler called qid=${qid} (type=${typeof qid}) isPackaged=${app.isPackaged}`);
     // 严格校验 qid 为正整数，防止路径遍历
     if (!Number.isInteger(qid) || qid <= 0 || qid > 1e7) return { ok: false, err: 'invalid qid' };
     const imgPath = findQImg(qid);
+    qimgLog(`findQImg -> ${imgPath}`);
     if (!imgPath) return { ok: false, err: 'not found: q' + qid };
     const buf = fs.readFileSync(imgPath);
+    qimgLog(`read ${buf.length} bytes, returning dataURL`);
     return { ok: true, data: 'data:image/png;base64,' + buf.toString('base64') };
-  } catch (err) { return { ok: false, err: String(err) }; }
+  } catch (err) { qimgLog(`ERROR ${String(err)}`); return { ok: false, err: String(err) }; }
 });
 
 // ======== 组卷历史 ========
