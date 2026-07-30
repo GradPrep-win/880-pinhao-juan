@@ -1,86 +1,72 @@
 {
-  "82": {
+  "4": {
     "file": "【A4紧凑版】880数一高数篇做题本.pdf",
-    "page": 13,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q82.png"
+    "page": 31,
+    "w": 1191,
+    "h": 1684,
+    "out": "resources/_qimgs\\q4.png"
   },
-  "141": {
+  "1": {
     "file": "【A4紧凑版】880数一高数篇做题本.pdf",
-    "page": 14,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q141.png"
+    "page": 5,
+    "w": 1191,
+    "h": 1684,
+    "out": "resources/_qimgs\\q1.png"
   },
-  "150": {
+  "37": {
     "file": "【A4紧凑版】880数一高数篇做题本.pdf",
-    "page": 24,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q150.png"
+    "page": 35,
+    "w": 1191,
+    "h": 1684,
+    "out": "resources/_qimgs\\q37.png"
   },
-  "305": {
-    "file": "【A4紧凑版】880数一高数篇做题本.pdf",
-    "page": 44,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q305.png"
-  },
-  "312": {
-    "file": "【A4紧凑版】880数一高数篇做题本.pdf",
-    "page": 45,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q312.png"
-  },
-  "673": {
-    "file": "【A4紧凑版】880数一高数篇做题本.pdf",
-    "page": 51,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q673.png"
-  },
-  "1059": {
+  "716": {
     "file": "【A4紧凑版】880数一线概篇做题本.pdf",
-    "page": 56,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q1059.png"
+    "page": 6,
+    "w": 1191,
+    "h": 1684,
+    "out": "resources/_qimgs\\q716.png"
   },
-  "1065": {
+  "998": {
     "file": "【A4紧凑版】880数一线概篇做题本.pdf",
-    "page": 57,
-    "w": 1241,
-    "h": 1754,
-    "out": "resources/_qimgs\\q1065.png"
+    "page": 6,
+    "w": 1191,
+    "h": 1684,
+    "out": "resources/_qimgs\\q998.png"
   },
-  "1340": {
+  "1233": {
+    "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
+    "page": 7,
+    "w": 1191,
+    "h": 1611,
+    "out": "resources/_qimgs\\q1233.png"
+  },
+  "1332": {
+    "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
+    "page": 28,
+    "w": 1191,
+    "h": 1611,
+    "out": "resources/_qimgs\\q1332.png"
+  },
+  "1232": {
+    "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
+    "page": 25,
+    "w": 1191,
+    "h": 1611,
+    "out": "resources/_qimgs\\q1232.png"
+  },
+  "1228": {
     "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
     "page": 18,
-    "w": 1241,
-    "h": 1678,
-    "out": "resources/_qimgs\\q1340.png"
+    "w": 1191,
+    "h": 1611,
+    "out": "resources/_qimgs\\q1228.png"
   },
-  "1425": {
+  "1359": {
     "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
-    "page": 29,
-    "w": 1241,
-    "h": 1678,
-    "out": "resources/_qimgs\\q1425.png"
-  },
-  "1624": {
-    "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
-    "page": 55,
-    "w": 1241,
-    "h": 1678,
-    "out": "resources/_qimgs\\q1624.png"
-  },
-  "1635": {
-    "file": "【A4紧凑版】李林880数二高数篇做题本.pdf",
-    "page": 57,
-    "w": 1241,
-    "h": 1678,
-    "out": "resources/_qimgs\\q1635.png"
+    "page": 88,
+    "w": 1191,
+    "h": 1611,
+    "out": "resources/_qimgs\\q1359.png"
   }
 }
