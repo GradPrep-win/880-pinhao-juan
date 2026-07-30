@@ -226,7 +226,10 @@ function findQImg(qid) {
   return null;
 }
 function qimgLog(msg) {
-  try { fs.appendFileSync(path.join(getAppDir(), '_qimg_debug.log'), `[${new Date().toISOString()}] ${msg}\n'); } catch {}
+  try {
+    const line = '[' + new Date().toISOString() + '] ' + msg + '\n';
+    fs.appendFileSync(path.join(getAppDir(), '_qimg_debug.log'), line);
+  } catch (e) {/* ignore */}
 }
 ipcMain.handle('question-image', (e, qid) => {
   try {
