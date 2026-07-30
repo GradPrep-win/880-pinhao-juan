@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-// 通用 db-api 调用：主进程按 method 白名单分发，渲染进程无法执行任意 SQL
+// 注意：Electron 35 预加载沙箱里不可用 path/fs 等 Node 模块
+// 所有 API 仅依赖 ipcRenderer
+
+// 通用 db-api 调用：主进程按 method 白名单分发，渲染进程不可执行任意 SQL
 function db(method, params) {
   return ipcRenderer.invoke('db-api', method, params).then((r) => {
     if (!r.ok) throw new Error(r.err);
