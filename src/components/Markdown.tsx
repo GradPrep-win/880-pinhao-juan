@@ -39,6 +39,23 @@ function LocalQImg({ qid }: { qid: number }) {
   return <span className="md-img-loading">[配图加载中…]</span>;
 }
 
+/** react-markdown 9 默认 urlTransform 只放行 https?|ircs?|mailto|xmpp，会把 local:qN 清洗为空。 */
+function mdUrlTransform(value: string): string {
+  if (/^local:q\d+$/.test(value)) return value;
+  const colon = value.indexOf(":");
+  const questionMark = value.indexOf("?");
+  const numberSign = value.indexOf("#");
+  const slash = value.indexOf("/");
+  if (
+    colon === -1 ||
+    (slash !== -1 && colon > slash) ||
+    (questionMark !== -1 && colon > questionMark) ||
+    (numberSign !== -1 && colon > numberSign) ||
+    /^(https?|ircs?|mailto|xmpp)$/i.test(value.slice(0, colon))
+  ) return value;
+  return "";
+}
+
 export default function Markdown({ content }: { content: string }) {
   const cleaned = stripWatermark(content || "");
   return (
@@ -46,6 +63,7 @@ export default function Markdown({ content }: { content: string }) {
       <ReactMarkdown
         remarkPlugins={[remarkMath, remarkGfm]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
+        urlTransform={mdUrlTransform}
         components={{
           img({ node, ...props }) {
             const src = (props as { src?: string }).src || "";

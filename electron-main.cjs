@@ -219,9 +219,7 @@ function findQImg(qid) {
     path.join(__dirname, '_qimgs', `q${qid}.png`),
   ];
   for (const c of candidates) {
-    const ok = fs.existsSync(c);
-    console.log(`[qimg] q${qid} try ${c} -> ${ok}`);
-    if (ok) return c;
+    if (fs.existsSync(c)) return c;
   }
   return null;
 }
