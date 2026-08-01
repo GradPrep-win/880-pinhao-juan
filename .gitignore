@@ -24,3 +24,13 @@ Thumbs.db
 
 # 截图（大文件）
 screenshot.png
+
+# 构建产物目录
+dist-app2/
+dist-app3/
+_mineru_imgs_work/
+*.pyc
+__pycache__/
+sections_db.txt
+section_type.txt
+sections.txt
