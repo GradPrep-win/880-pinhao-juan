@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createPlan: (p) => db('createPlan', p).then((r) => r.lastInsertRowid),
   deletePlan: (planId) => db('deletePlan', { planId }),
   recordPlanUsage: (planId, questionIds) => db('recordPlanUsage', { planId, questionIds }),
+  recordPaperUsage: (questionIds) => db('recordPaperUsage', { questionIds }),
+  resetPaperUsage: () => db('resetPaperUsage'),
+  updatePlanCounts: (p) => db('updatePlanCounts', p),
 
   // 组卷历史
   savePaper: (p) => db('savePaper', p).then((r) => r.lastInsertRowid),

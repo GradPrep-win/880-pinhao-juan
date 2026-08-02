@@ -82,6 +82,12 @@ function migrate(database) {
       questions TEXT,
       created_at INTEGER
     );
+    CREATE TABLE IF NOT EXISTS paper_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question_id INTEGER NOT NULL,
+      used_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pu_q ON paper_usage(question_id);
   `);
 }
 
@@ -98,7 +104,7 @@ function dbApi(method, params = {}) {
       const p = [examType, ...subjects];
       let sql = `SELECT b.subject, q.type, COUNT(*) AS cnt
         FROM question q JOIN chapter ch ON ch.id = q.chapter_id JOIN bank b ON b.id = ch.bank_id
-        WHERE b.exam_type = ? AND b.subject IN (${ph})`;
+        WHERE b.exam_type = ? AND b.subject IN (${ph}) AND q.num >= 1`;
       if (sections && sections.length > 0 && sections.length < 3) {
         sql += ` AND q.section IN (${sections.map(() => '?').join(',')})`;
         p.push(...sections);
@@ -107,6 +113,7 @@ function dbApi(method, params = {}) {
         sql += ` AND q.id NOT IN (SELECT question_id FROM plan_usage WHERE plan_id = ?)`;
         p.push(planId);
       }
+      sql += ` AND q.id NOT IN (SELECT question_id FROM paper_usage)`;
       sql += ' GROUP BY b.subject, q.type';
       const m = {};
       for (const s of subjects) m[s] = { 选择题: 0, 填空题: 0, 解答题: 0 };
@@ -131,7 +138,7 @@ function dbApi(method, params = {}) {
       let sql = `SELECT q.id, q.type, q.section, q.num, q.content, q.answer,
         ch.name AS chapter_name, ch.ord AS chapter_order, b.name AS bank_name
         FROM question q JOIN chapter ch ON ch.id = q.chapter_id JOIN bank b ON b.id = ch.bank_id
-        WHERE b.exam_type = ? AND b.subject = ? AND q.type = ?`;
+        WHERE b.exam_type = ? AND b.subject = ? AND q.type = ? AND q.num >= 1`;
       if (sections && sections.length > 0 && sections.length < 3) {
         sql += ` AND q.section IN (${sections.map(() => '?').join(',')})`;
         p.push(...sections);
@@ -140,6 +147,7 @@ function dbApi(method, params = {}) {
         sql += ` AND q.id NOT IN (SELECT question_id FROM plan_usage WHERE plan_id = ?)`;
         p.push(planId);
       }
+      sql += ` AND q.id NOT IN (SELECT question_id FROM paper_usage)`;
       sql += ' ORDER BY ch.ord, q.num';
       return db.prepare(sql).all(...p);
     }
@@ -171,6 +179,26 @@ function dbApi(method, params = {}) {
       const ins = db.prepare('INSERT OR IGNORE INTO plan_usage (plan_id, question_id) VALUES (?,?)');
       const tx = db.transaction((ids) => { for (const id of ids) ins.run(planId, id); });
       tx(questionIds);
+      return { ok: true };
+    }
+
+    case 'recordPaperUsage': {
+      const { questionIds } = params;
+      if (!questionIds || !questionIds.length) return { ok: true };
+      const ins = db.prepare('INSERT OR IGNORE INTO paper_usage (question_id, used_at) VALUES (?,?)');
+      const tx = db.transaction((ids) => { const now = Date.now(); for (const id of ids) ins.run(id, now); });
+      tx(questionIds);
+      return { ok: true };
+    }
+
+    case 'resetPaperUsage': {
+      db.prepare('DELETE FROM paper_usage').run();
+      return { ok: true };
+    }
+
+    case 'updatePlanCounts': {
+      const { planId, counts } = params;
+      db.prepare('UPDATE plan SET counts = ? WHERE id = ?').run(JSON.stringify(counts), planId);
       return { ok: true };
     }
 

@@ -222,9 +222,16 @@ body {
 .sidebar .warn { margin: 0 18px 10px; padding: 6px 10px; background: #fffbeb; color: #b45309; border-radius: 4px; font-size: 12px; }
 .toolbar .paper-meta { font-size: 12px; color: var(--muted); margin-left: auto; }
 
+.compose-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 18px 18px;
+}
 .btn-primary {
   display: block;
-  margin: 0 18px 18px;
+  width: 100%;
+  margin: 0;
   padding: 10px;
   background: var(--accent);
   color: #fff;
@@ -236,6 +243,20 @@ body {
 }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
 .btn-primary:not(:disabled):hover { filter: brightness(1.1); }
+
+.btn-secondary {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--accent); color: #fff; }
 
 .main {
   overflow-y: auto;

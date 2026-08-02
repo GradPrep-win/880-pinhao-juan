@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { getBanks, aggregateCounts, listQuestions, listPlans, createPlan, deletePlan, planUsedCounts, recordPlanUsage, savePaper, listPapers, getPaper, deletePaper } from './lib/db.js';
+import { getBanks, aggregateCounts, listQuestions, listPlans, createPlan, deletePlan, planUsedCounts, recordPlanUsage, recordPaperUsage, resetPaperUsage, updatePlanCounts, savePaper, listPapers, getPaper, deletePaper } from './lib/db.js';
 import { compose, TYPE_LABEL_CHOICES } from './lib/compose.js';
 import Markdown from './components/Markdown.tsx';
 import './App.css';
@@ -219,6 +219,8 @@ export default function App() {
         const u = await planUsedCounts({ planId });
         setUsedMap(u);
       }
+      // 记录全局已用题（跨组卷去重）
+      await recordPaperUsage(p.questions.map(q => q.id));
     } catch (e) {
       setError(e.message || '组卷失败');
     } finally {
@@ -233,8 +235,29 @@ export default function App() {
 
   const updateCount = (subj, type, val) => {
     setCounts(prev => ({ ...prev, [subj]: { ...(prev[subj] || {}), [type]: Math.max(0, +val || 0) } }));
-    setPlanId(null); // 手动改配比后取消方案选中
   };
+
+  // 把当前题数保存回方案
+  const savePlanCounts = useCallback(async () => {
+    if (!planId) return;
+    try {
+      await updatePlanCounts({ planId, counts });
+    } catch (e) {
+      setError('保存方案题数失败: ' + e.message);
+    }
+  }, [planId, counts]);
+
+  // 重置全局已用题（跨组卷去重缓存）
+  const handleResetUsed = useCallback(async () => {
+    if (!confirm('确定重置已用题记录？重置后，之前组过的题目可以再次被抽到。')) return;
+    try {
+      await resetPaperUsage();
+      setAggRemain({});
+      aggregateCounts({ examType, subjects, sections, planId }).then((r) => { setAggRemain(r); setAggLoaded(true); }).catch(() => {});
+    } catch (e) {
+      setError('重置失败: ' + e.message);
+    }
+  }, [examType, subjects, sections, planId]);
 
   // 方案进度条数据：每题型 已用/总量
   const planProgress = useMemo(() => {
@@ -408,9 +431,17 @@ export default function App() {
         {error && <div className="err">{error}</div>}
         {anyOver && !historyPaper && <div className="warn">⚠ 部分题型数量超过剩余，超出部分按实际余量抽</div>}
 
-        <button className="btn-primary" disabled={generating || subjects.length === 0} onClick={doCompose}>
-          {generating ? '正在组卷…' : `组卷 (共 ${subjects.reduce((s,subj)=>s+TYPE_LABEL_CHOICES.reduce((a,t)=>a+((counts[subj]||{})[t]||0),0),0)} 题)`}
-        </button>
+        {!planId && <div className="warn">⚠ 请先选择或创建一个组卷方案，再点组卷</div>}
+        <div className="compose-btns">
+          <button className="btn-primary" disabled={generating || subjects.length === 0 || !planId} onClick={doCompose}
+            title={!planId ? '请先选择或创建组卷方案' : ''}>
+            {generating ? '正在组卷…' : `组卷 (共 ${subjects.reduce((s,subj)=>s+TYPE_LABEL_CHOICES.reduce((a,t)=>a+((counts[subj]||{})[t]||0),0),0)} 题)`}
+          </button>
+          {planId && (
+            <button className="btn-secondary" onClick={savePlanCounts} title="把当前题数保存到方案">保存题数</button>
+          )}
+          <button className="btn-secondary" onClick={handleResetUsed} title="重置后，之前组过的题可再次被抽到">重置已用题</button>
+        </div>
       </aside>
 
       <main className="main">

@@ -34,6 +34,20 @@ export async function recordPlanUsage(planId, questionIds) {
   return window.electronAPI.recordPlanUsage(planId, questionIds);
 }
 
+// ======== 全局去重（跨组卷） ========
+export async function recordPaperUsage(questionIds) {
+  return window.electronAPI.recordPaperUsage(questionIds);
+}
+
+export async function resetPaperUsage() {
+  return window.electronAPI.resetPaperUsage();
+}
+
+// ======== 方案更新题数 ========
+export async function updatePlanCounts({ planId, counts }) {
+  return window.electronAPI.updatePlanCounts({ planId, counts });
+}
+
 // ======== 组卷历史 ========
 export async function savePaper({ title, examType, subjects, sections, counts, totalScore, questions }) {
   return window.electronAPI.savePaper({ title, examType, subjects, sections, counts, totalScore, questions });
