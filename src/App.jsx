@@ -117,8 +117,15 @@ export default function App() {
     setPaper(null);
   }
 
+  // 难度分类：点击切换该分类的选中状态（多选）
   function toggleSection(sec) {
     setSections(prev => prev.includes(sec) ? prev.filter(s => s !== sec) : [...prev, sec]);
+    setPaper(null); setPlanId(null);
+  }
+
+  // 只保留当前分类，取消其他分类（单选）
+  function selectSectionOnly(sec) {
+    setSections([sec]);
     setPaper(null); setPlanId(null);
   }
 
@@ -308,10 +315,12 @@ export default function App() {
           })}
         </div>
 
-        <div className="section-title">难度分类（勾选参与组卷的分类）</div>
+        <div className="section-title">难度分类（点击单选，Ctrl/Cmd+点击可多选）<span style={{float:'right',fontWeight:400,fontSize:11,color:'#888'}}>已选：{sections.join('+')}</span></div>
         <div className="section-list">
           {ALL_SECTIONS.map(sec => (
-            <button key={sec} className={'section-btn ' + (sections.includes(sec) ? 'active' : '')} onClick={() => toggleSection(sec)}>{sec}</button>
+            <button key={sec} className={'section-btn ' + (sections.includes(sec) ? 'active' : '')}
+              onClick={e => { if (e.ctrlKey || e.metaKey) toggleSection(sec); else selectSectionOnly(sec); }}
+              title="点击=仅选此项，Ctrl+点击=多选">{sec}</button>
           ))}
         </div>
 
