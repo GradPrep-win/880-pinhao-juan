@@ -254,6 +254,11 @@ export default function App() {
       await resetPaperUsage();
       setAggRemain({});
       aggregateCounts({ examType, subjects, sections, planId }).then((r) => { setAggRemain(r); setAggLoaded(true); }).catch(() => {});
+      // 同步刷新方案进度条
+      if (planId) {
+        const u = await planUsedCounts({ planId });
+        setUsedMap(u);
+      }
     } catch (e) {
       setError('重置失败: ' + e.message);
     }
@@ -549,34 +554,41 @@ function PaperView({ paper, onRegen, isHistory, onCloseHistory }) {
             ))}
           </div>
         ))}
-        {/* 题目来源汇总（卷面底部，按章节顺序→题型分组，方便纸质试卷翻阅） */}
+        {/* 题目来源汇总（卷面底部，按章节+难度分类归组，方便纸质试卷翻阅） */}
         <div className="paper-source-footer">
           <div className="paper-source-title">题目来源</div>
           {(() => {
-            // 跨题型按 chapter 归组，章节按 chapter_order 排序（第一章→第八章）
+            // 按 chapter + section 归组（基础/综合/拓展分开），避免同学段不同分类的题号混淆
             const chapMap = {};
             for (const ty of TYPE_LABEL_CHOICES) {
               for (const q of grouped[ty]) {
-                const key = (q.chapter_order ?? 9999) + '|||' + (q.bank_name || '') + '|||' + (q.chapter_name || '未知章节');
+                const key = (q.chapter_order ?? 9999) + '|||' + (q.bank_name || '') + '|||' + (q.chapter_name || '未知章节') + '|||' + (q.section || '');
                 (chapMap[key] = chapMap[key] || []).push(q);
               }
             }
             const chapKeys = Object.keys(chapMap).sort((a, b) => {
-              const oa = parseInt(a.split('|||')[0], 10) || 0;
-              const ob = parseInt(b.split('|||')[0], 10) || 0;
-              return oa - ob;
+              const pa = a.split('|||');
+              const pb = b.split('|||');
+              const oa = parseInt(pa[0], 10) || 0;
+              const ob = parseInt(pb[0], 10) || 0;
+              if (oa !== ob) return oa - ob;
+              // 同章节按 基础→综合→拓展 排序
+              const order = { '基础': 0, '综合': 1, '拓展': 2 };
+              return (order[pa[3]] ?? 9) - (order[pb[3]] ?? 9);
             });
             return chapKeys.map(key => {
               const qs = chapMap[key];
-              const chapter = qs[0].chapter_name || '未知章节';
-              const bn = qs[0].bank_name || chapter;
+              const parts = key.split('|||');
+              const chapter = parts[2] || '未知章节';
+              const section = parts[3] || '';
+              const bn = parts[1] || chapter;
               const m = bn.match(/^(.*?)([一-鿿]+篇)$/);
               const src = m ? m[2] : bn.replace(/^.*[一-鿿]([一-鿿]{0,4})$/, '$1') || bn;
               // 章节内按题型分组（选择→填空→解答），题型内按卷面号排序
               const byType = { 选择题: [], 填空题: [], 解答题: [] };
               for (const q of qs) if (byType[q.type]) byType[q.type].push(q);
               for (const t of TYPE_LABEL_CHOICES) byType[t].sort((a, b) => a.paper_no - b.paper_no);
-              const parts = TYPE_LABEL_CHOICES
+              const typeParts = TYPE_LABEL_CHOICES
                 .map(t => {
                   const arr = byType[t];
                   if (!arr.length) return null;
@@ -587,8 +599,8 @@ function PaperView({ paper, onRegen, isHistory, onCloseHistory }) {
                 .filter(Boolean);
               return (
                 <div key={key} className="paper-source-chapter">
-                  <span className="paper-source-group-title">《{src}》{chapter}：</span>
-                  <span className="paper-source-item">{parts.join('；')}</span>
+                  <span className="paper-source-group-title">《{src}》{chapter}（{section}）：</span>
+                  <span className="paper-source-item">{typeParts.join('；')}</span>
                 </div>
               );
             });

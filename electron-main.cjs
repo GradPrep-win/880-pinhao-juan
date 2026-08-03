@@ -104,8 +104,9 @@ function dbApi(method, params = {}) {
       const p = [examType, ...subjects];
       let sql = `SELECT b.subject, q.type, COUNT(*) AS cnt
         FROM question q JOIN chapter ch ON ch.id = q.chapter_id JOIN bank b ON b.id = ch.bank_id
-        WHERE b.exam_type = ? AND b.subject IN (${ph}) AND q.num >= 1`;
-      if (sections && sections.length > 0 && sections.length < 3) {
+        WHERE b.exam_type = ? AND b.subject IN (${ph}) AND q.num >= 1
+        AND LENGTH(q.content) >= 15 AND q.content NOT LIKE '%$$'`;
+      if (sections && sections.length > 0) {
         sql += ` AND q.section IN (${sections.map(() => '?').join(',')})`;
         p.push(...sections);
       }
@@ -138,8 +139,9 @@ function dbApi(method, params = {}) {
       let sql = `SELECT q.id, q.type, q.section, q.num, q.content, q.answer,
         ch.name AS chapter_name, ch.ord AS chapter_order, b.name AS bank_name
         FROM question q JOIN chapter ch ON ch.id = q.chapter_id JOIN bank b ON b.id = ch.bank_id
-        WHERE b.exam_type = ? AND b.subject = ? AND q.type = ? AND q.num >= 1`;
-      if (sections && sections.length > 0 && sections.length < 3) {
+        WHERE b.exam_type = ? AND b.subject = ? AND q.type = ? AND q.num >= 1
+        AND LENGTH(q.content) >= 15 AND q.content NOT LIKE '%$$'`;
+      if (sections && sections.length > 0) {
         sql += ` AND q.section IN (${sections.map(() => '?').join(',')})`;
         p.push(...sections);
       }

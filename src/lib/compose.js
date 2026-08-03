@@ -14,7 +14,7 @@ function shuffle(arr) {
 }
 
 // 按章节均匀分配 count 道题：每章分 floor(count/n) 道，余数随机补给部分章
-// 章内题目不够时，缺额补给其他有余量的章，保证总量尽量达标
+// 池子不够时直接取全部现有题目，不跨章节补题（用户要求：缺题就缺题，不要从别处补）
 function pickBalanced(pool, count) {
   // 按 chapter_order 分组，保留章节顺序
   const byChapter = {};
@@ -28,6 +28,14 @@ function pickBalanced(pool, count) {
   // 每章先 shuffle
   for (const k of chapters) byChapter[k] = shuffle(byChapter[k]);
 
+  // 池子总量不够时，直接取全部，不再补题
+  const totalAvail = chapters.reduce((s, k) => s + byChapter[k].length, 0);
+  if (totalAvail <= count) {
+    const picked = [];
+    for (const k of chapters) picked.push(...byChapter[k]);
+    return picked;
+  }
+
   const alloc = {}; // key -> 应抽几道
   const base = Math.floor(count / chapters.length);
   let remainder = count - base * chapters.length;
@@ -39,26 +47,10 @@ function pickBalanced(pool, count) {
 
   chapters.forEach((k, i) => { alloc[k] = base + (extraIdx.has(i) ? 1 : 0); });
 
-  // 处理缺额：某章题不够时，把缺额匀给有余量的章
-  let deficit = 0;
+  // 某章题不够时，该章取全部，缺额不补（保留给调用方提示）
   for (const k of chapters) {
     const have = byChapter[k].length;
-    if (alloc[k] > have) {
-      deficit += alloc[k] - have;
-      alloc[k] = have;
-    }
-  }
-  // 把 deficit 分给有余量的章（每章最多补到其总题量）
-  if (deficit > 0) {
-    const rich = chapters.filter(k => alloc[k] < byChapter[k].length);
-    shuffle(rich);
-    for (const k of rich) {
-      if (deficit <= 0) break;
-      const room = byChapter[k].length - alloc[k];
-      const give = Math.min(room, deficit);
-      alloc[k] += give;
-      deficit -= give;
-    }
+    if (alloc[k] > have) alloc[k] = have;
   }
 
   const picked = [];
