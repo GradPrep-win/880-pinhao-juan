@@ -1,5 +1,5 @@
 // 把 md 习题册转成 SQLite
-// 三级结构: exam_type(数一/数二/数三) × subject(高数篇/线代篇/概率篇) × section(基础/综合/拓展)
+// 三级结构: exam_type(数一/数二) × subject(高数篇/线代篇/概率篇) × section(基础/综合/拓展)
 // 参考 D:\program\GradPrep
 import fs from 'fs';
 import path from 'path';

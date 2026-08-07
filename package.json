@@ -33,7 +33,7 @@
     "appId": "com.gradprep.app",
     "productName": "GradPrep",
     "directories": {
-      "output": "dist-app"
+      "output": "dist-app4"
     },
     "files": [
       "dist/**/*",

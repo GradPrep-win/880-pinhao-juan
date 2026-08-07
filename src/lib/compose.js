@@ -60,7 +60,7 @@ function pickBalanced(pool, count) {
 
 /**
  * @param {object} opts
- * @param {string} opts.examType  数一/数二/数三
+ * @param {string} opts.examType  数一/数二
  * @param {string[]} opts.subjects  选中的篇章如 ["高数篇","线代篇"]
  * @param {Array<{subject,type,count}>} opts.picks  每个(篇章,题型)指定抽几道
  * @param {Function} opts.listQuestions  (subject,type) => Promise<Question[]>

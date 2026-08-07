@@ -37,15 +37,6 @@ function getPreloadPath() {
   return path.join(__dirname, 'preload.cjs');
 }
 
-// index.html 路径
-function getIndexHtml() {
-  if (app.isPackaged) {
-    // packaged: resources/app.asar/dist/index.html (通过 asar 协议)
-    return 'index.html'; // 由 loadURL 拼 asar:// 协议
-  }
-  return null;
-}
-
 function findDb() {
   const d = getAppDir();
   const candidates = [
@@ -54,6 +45,8 @@ function findDb() {
     path.join(__dirname, 'data.db'),                // dev
   ];
   for (const c of candidates) if (fs.existsSync(c)) return c;
+  // 全部未找到：警告并回落到首个候选（better-sqlite3 会创建空文件，便于首次导入）
+  console.warn('[GradPrep] data.db 不存在，将新建空库：', candidates[0]);
   return candidates[0];
 }
 
@@ -88,7 +81,35 @@ function migrate(database) {
       used_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pu_q ON paper_usage(question_id);
+    CREATE TABLE IF NOT EXISTS plan (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT,
+      exam_type TEXT,
+      subjects TEXT,
+      sections TEXT,
+      counts TEXT,
+      created_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS plan_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id INTEGER NOT NULL,
+      question_id INTEGER NOT NULL,
+      UNIQUE(plan_id, question_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pu_plan ON plan_usage(plan_id);
   `);
+  // 兼容旧库：给已存在但缺唯一约束的 plan_usage 补约束（去重 + 唯一索引）
+  try {
+    database.exec(`
+      DELETE FROM plan_usage WHERE id NOT IN (
+        SELECT MIN(id) FROM plan_usage GROUP BY plan_id, question_id
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_pu_plan_unique ON plan_usage(plan_id, question_id);
+    `);
+  } catch (e) {
+    // 旧库若表结构异常，不影响主流程，下次再试
+    console.warn('[migrate] plan_usage 兼容处理失败（可忽略）：', e.message);
+  }
 }
 
 // ======== 数据库 API（白名单化，渲染进程不可执行任意 SQL） ========
@@ -261,42 +282,6 @@ ipcMain.handle('question-image', (e, qid) => {
     if (!imgPath) return { ok: false, err: 'not found: q' + qid };
     const buf = fs.readFileSync(imgPath);
     return { ok: true, data: 'data:image/png;base64,' + buf.toString('base64') };
-  } catch (err) { return { ok: false, err: String(err) }; }
-});
-
-// ======== 组卷历史 ========
-ipcMain.handle('paper-save', (e, payload) => {
-  try {
-    const { title, examType, subjects, sections, counts, totalScore, questions } = payload;
-    const info = openDb().prepare(
-      `INSERT INTO paper (title, exam_type, subjects, sections, counts, total_score, questions, created_at)
-       VALUES (?,?,?,?,?,?,?,?)`
-    ).run(title, examType, JSON.stringify(subjects), JSON.stringify(sections), JSON.stringify(counts), totalScore, JSON.stringify(questions), Date.now());
-    return { ok: true, id: info.lastInsertRowid };
-  } catch (err) { return { ok: false, err: String(err) }; }
-});
-
-ipcMain.handle('paper-list', (e, examType) => {
-  try {
-    const rows = openDb().prepare(
-      `SELECT id, title, exam_type, subjects, sections, counts, total_score, created_at FROM paper
-       WHERE exam_type = ? ORDER BY created_at DESC LIMIT 100`
-    ).all(examType).map(r => ({ ...r }));
-    return { ok: true, rows };
-  } catch (err) { return { ok: false, err: String(err) }; }
-});
-
-ipcMain.handle('paper-get', (e, id) => {
-  try {
-    const row = { ...openDb().prepare('SELECT * FROM paper WHERE id = ?').get(id) };
-    return { ok: true, row };
-  } catch (err) { return { ok: false, err: String(err) }; }
-});
-
-ipcMain.handle('paper-delete', (e, id) => {
-  try {
-    openDb().prepare('DELETE FROM paper WHERE id = ?').run(id);
-    return { ok: true };
   } catch (err) { return { ok: false, err: String(err) }; }
 });
 

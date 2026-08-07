@@ -4,11 +4,10 @@ import { compose, TYPE_LABEL_CHOICES } from './lib/compose.js';
 import Markdown from './components/Markdown.tsx';
 import './App.css';
 
-const EXAM_TYPES = ['数一', '数二', '数三'];
+const EXAM_TYPES = ['数一', '数二'];
 const SUBJECT_BY_EXAM = {
   '数一': ['高数篇', '线代篇', '概率篇'],
   '数二': ['高数篇', '线代篇'],
-  '数三': ['高数篇', '线代篇', '概率篇'],
 };
 const ALL_SECTIONS = ['基础', '综合', '拓展'];
 const SCORE = { 选择题: 5, 填空题: 5, 解答题: 10 };
@@ -205,7 +204,7 @@ export default function App() {
       if (picks.length === 0) { setGenerating(false); return; }
       const p = await compose({
         examType, subjects, picks, sections, planId,
-        listQuestions: async ({ subject, type, segs, pid }) => {
+        listQuestions: async ({ subject, type, sections: segs, pid }) => {
           const { listQuestions } = await import('./lib/db.js');
           return listQuestions({ examType, subject, type, sections: segs, planId: pid });
         }
