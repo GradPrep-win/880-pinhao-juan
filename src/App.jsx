@@ -293,7 +293,7 @@ export default function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <h1>🎓 GradPrep<span className="sub">考研智能组卷 · 精简版</span></h1>
+        <h1>📝 880拼好卷<span className="sub">考研数学智能组卷</span></h1>
 
         <div className="section-title">考试类型</div>
         <div className="exam-tabs">
