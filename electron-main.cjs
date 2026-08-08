@@ -46,7 +46,7 @@ function findDb() {
   ];
   for (const c of candidates) if (fs.existsSync(c)) return c;
   // 全部未找到：警告并回落到首个候选（better-sqlite3 会创建空文件，便于首次导入）
-  console.warn('[880拼好卷] data.db 不存在，将新建空库：', candidates[0]);
+  console.warn('[880AutoPaper] data.db 不存在，将新建空库：', candidates[0]);
   return candidates[0];
 }
 
@@ -289,7 +289,7 @@ let mainWindow;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280, height: 840,
-    title: '880拼好卷',
+    title: '880AutoPaper',
     autoHideMenuBar: true,
     webPreferences: {
       preload: getPreloadPath(),

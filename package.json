@@ -1,7 +1,7 @@
 {
-  "name": "880-pinhao-juan",
+  "name": "880-autopaper",
   "version": "1.0.0",
-  "description": "880拼好卷 - 考研数学智能组卷系统",
+  "description": "880AutoPaper - 考研数学智能组卷系统",
   "type": "commonjs",
   "main": "electron-main.cjs",
   "scripts": {
@@ -30,8 +30,8 @@
     "vite": "^6.4.3"
   },
   "build": {
-    "appId": "com.880pinhao.app",
-    "productName": "880拼好卷",
+    "appId": "com.880autopaper.app",
+    "productName": "880AutoPaper",
     "directories": {
       "output": "dist-app4"
     },
@@ -57,7 +57,7 @@
     ],
     "win": {
       "target": "portable",
-      "artifactName": "880拼好卷.exe"
+      "artifactName": "880AutoPaper.exe"
     },
     "npmRebuild": false,
     "asarUnpack": [

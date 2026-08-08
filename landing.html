@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>880AutoPaper - 考研数学智能组卷系统</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+    .hero {
+      text-align: center;
+      color: white;
+      padding: 40px 0 30px;
+    }
+    .hero h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .hero p {
+      font-size: 1.2em;
+      opacity: 0.95;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      margin: 24px 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    .card h2 {
+      font-size: 1.4em;
+      margin-bottom: 16px;
+      color: #333;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .feature {
+      text-align: center;
+      padding: 20px 12px;
+      background: #f8f9ff;
+      border-radius: 12px;
+    }
+    .feature .icon { font-size: 2em; margin-bottom: 8px; }
+    .feature h3 { font-size: 1em; color: #555; margin-bottom: 4px; }
+    .feature p { font-size: 0.85em; color: #888; }
+    .btn-download {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      margin: 30px auto;
+      padding: 18px 40px;
+      font-size: 1.3em;
+      color: white;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-download:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    }
+    .file-info {
+      text-align: center;
+      color: #888;
+      font-size: 0.9em;
+      margin-top: 8px;
+    }
+    .steps { counter-reset: step; }
+    .steps li {
+      list-style: none;
+      padding: 12px 0 12px 50px;
+      position: relative;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .warning {
+      background: #fff8e1;
+      border-left: 4px solid #ffc107;
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-size: 0.95em;
+    }
+    .warning strong { color: #f57c00; }
+    .screenshot {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      margin: 16px 0;
+    }
+    footer {
+      text-align: center;
+      color: rgba(255,255,255,0.7);
+      padding: 30px 0;
+      font-size: 0.9em;
+    }
+    footer a { color: rgba(255,255,255,0.9); }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 1.8em; }
+      .hero p { font-size: 1em; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>📝 880AutoPaper</h1>
+      <p>考研数学智能组卷系统 · 本地运行 · 永久免费</p>
+    </div>
+
+    <div class="card">
+      <h2>✨ 核心功能</h2>
+      <div class="features">
+        <div class="feature">
+          <div class="icon">🎯</div>
+          <h3>智能抽题</h3>
+          <p>按章节均匀分配，无放回随机抽取</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🔄</div>
+          <h3>自动去重</h3>
+          <p>跨组卷记录已出题目，避免重复</p>
+        </div>
+        <div class="feature">
+          <div class="icon">📊</div>
+          <h3>难度筛选</h3>
+          <p>基础 / 综合 / 拓展，自由组合</p>
+        </div>
+        <div class="feature">
+          <div class="icon">📐</div>
+          <h3>公式渲染</h3>
+          <p>数学公式原生支持，清晰显示</p>
+        </div>
+        <div class="feature">
+          <div class="icon">💾</div>
+          <h3>方案管理</h3>
+          <p>保存多套出题方案，一键复用</p>
+        </div>
+        <div class="feature">
+          <div class="icon">🚀</div>
+          <h3>离线运行</h3>
+          <p>无需联网，数据全存本地</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📸 界面预览</h2>
+      <img class="screenshot" src="screenshot1.png" alt="880AutoPaper 主界面" onerror="this.style.display='none'">
+      <img class="screenshot" src="screenshot2.png" alt="组卷结果" onerror="this.style.display='none'">
+    </div>
+
+    <a class="btn-download" href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper.exe" download>
+      ⬇️ 立即下载 Windows 版
+    </a>
+    <p class="file-info">版本 v1.0.0 · 绿色免安装 · 文件大小约 200MB</p>
+
+    <div class="card">
+      <h2>📖 使用说明</h2>
+      <ol class="steps">
+        <li><strong>下载</strong>：点击上方按钮下载 880AutoPaper</li>
+        <li><strong>运行</strong>：双击 exe 文件启动（首次可能提示安全警告，见下方说明）</li>
+        <li><strong>选题</strong>：选择考试科目（数一/数二）→ 选择篇章（高数/线代/概率）→ 选择难度、题型和题数</li>
+        <li><strong>组卷</strong>：点击「开始组卷」，系统自动按章节均匀抽题并去重</li>
+        <li><strong>管理</strong>：可保存组卷方案，下次一键复用</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ 常见问题</h2>
+      <div class="warning">
+        <strong>Windows 提示"不受支持的应用"？</strong><br>
+        本软件为个人开发，未购买代码签名证书。点击对话框中的「更多信息」→「仍要运行」即可正常使用。软件不上传任何数据，请放心。
+      </div>
+      <div class="warning">
+        <strong>杀毒软件误报？</strong><br>
+        部分杀毒软件（360、电脑管家等）可能误报。将软件加入白名单即可。
+      </div>
+      <p style="margin-top:16px;"><strong>支持系统：</strong>Windows 10 / 11（64位）</p>
+      <p><strong>Mac / Linux：</strong>暂不支持</p>
+    </div>
+
+    <div class="card">
+      <h2>💬 反馈与建议</h2>
+      <p>使用过程中遇到问题，或有功能建议，欢迎在 GitHub 提交反馈：</p>
+      <p style="margin-top:12px;"><a href="https://github.com/GradPrep-win/880-pinhao-juan/issues" target="_blank">github.com/GradPrep-win/880-pinhao-juan</a></p>
+    </div>
+
+    <footer>
+      <p>880AutoPaper · 考研路上，与你同行</p>
+      <p style="margin-top:8px;"><a href="https://github.com/GradPrep-win/880-pinhao-juan">GitHub 开源</a></p>
+    </footer>
+  </div>
+</body>
+</html>
