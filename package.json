@@ -39,7 +39,8 @@
       "dist/**/*",
       "electron-main.cjs",
       "node_modules/**",
-      "!**/*.map"
+      "!**/*.map",
+      "!**/katex/contrib/**"
     ],
     "extraResources": [
       {

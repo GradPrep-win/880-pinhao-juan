@@ -356,6 +356,26 @@ body {
 .md-body th, .md-body td { border: 1px solid #ccc; padding: 0.2em 0.6em; }
 .md-body ul, .md-body ol { margin: 0.3em 0; padding-left: 1.5em; }
 
+/* === 加载与 Toast === */
+.loading-screen {
+  display: flex; align-items: center; justify-content: center;
+  height: 100vh; font-size: 1.1em; color: var(--muted);
+}
+.toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px;
+  font-size: 0.9em; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  animation: toastIn 0.2s ease-out; z-index: 1000;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* === 空状态引导 === */
+.empty-hint { padding: 40px 24px; text-align: center; }
+.empty-hint-title { font-size: 1.3em; margin-bottom: 16px; color: var(--fg); }
+.empty-hint-steps { text-align: left; display: inline-block; margin: 0 auto; padding-left: 1.2em; color: var(--muted); line-height: 2; }
+.empty-hint-steps b { color: var(--accent); }
+.empty-hint-warn { margin-top: 16px; color: #f59e0b; font-size: 0.9em; }
+
 @media print {
   .sidebar, .toolbar, .difficulty-table, .section-title, .btn-primary, .bank-tabs { display: none !important; }
   body, .app, .main { background: #fff; height: auto; overflow: visible; display: block; }

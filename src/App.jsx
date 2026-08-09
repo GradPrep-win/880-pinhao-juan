@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { getBanks, aggregateCounts, listQuestions, listPlans, createPlan, deletePlan, planUsedCounts, recordPlanUsage, recordPaperUsage, resetPaperUsage, updatePlanCounts, savePaper, listPapers, getPaper, deletePaper } from './lib/db.js';
+import { aggregateCounts, listQuestions, listPlans, createPlan, deletePlan, planUsedCounts, recordPlanUsage, recordPaperUsage, resetPaperUsage, updatePlanCounts, savePaper, listPapers, getPaper, deletePaper } from './lib/db.js';
 import { compose, TYPE_LABEL_CHOICES } from './lib/compose.js';
 import Markdown from './components/Markdown.tsx';
 import './App.css';
@@ -22,7 +22,7 @@ function defaultCountsFor(examType, subjects) {
 }
 
 export default function App() {
-  const [banks, setBanks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [examType, setExamType] = useState('数一');
   const [subjects, setSubjects] = useState(['高数篇']);
   const [counts, setCounts] = useState({ '高数篇': { 选择题: 4, 填空题: 4, 解答题: 4 } });
@@ -33,6 +33,12 @@ export default function App() {
   const [paper, setPaper] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }, []);
 
   // 方案
   const [plans, setPlans] = useState([]);
@@ -45,7 +51,12 @@ export default function App() {
   const [papers, setPapers] = useState([]);
   const [historyPaper, setHistoryPaper] = useState(null); // 从历史载入查看的试卷
 
-  useEffect(() => { getBanks().then(setBanks).catch(e => setError(String(e))); }, []);
+  useEffect(() => {
+    // 预加载：触发数据库迁移，确保表结构就绪
+    aggregateCounts({ examType: '数一', subjects: ['高数篇'], sections: [] })
+      .then(() => setLoading(false))
+      .catch(e => { setError(String(e)); setLoading(false); });
+  }, []);
 
   const SUBJS = SUBJECT_BY_EXAM[examType] || [];
 
@@ -87,7 +98,7 @@ export default function App() {
         questions: p.questions,
       });
       loadPapers();
-    } catch {}
+    } catch (e) { setError('保存历史失败: ' + e.message); }
   }, [examType, loadPapers]);
 
   // 载入方案已用题量
@@ -151,6 +162,7 @@ export default function App() {
     setShowPlanName(false);
     await loadPlans();
     setPlanId(id);
+    showToast(`方案「${name}」已创建`);
   }
 
   async function removePlan(p) {
@@ -177,7 +189,7 @@ export default function App() {
       };
       setHistoryPaper(p);
       setPaper(p);
-    } catch {}
+    } catch (e) { setError('载入历史记录失败: ' + e.message); }
   }
 
   async function removePaper(pp) {
@@ -194,7 +206,7 @@ export default function App() {
 
   const doCompose = useCallback(async () => {
     if (subjects.length === 0 || generating) return;
-    setGenerating(true); setError(null);
+    setGenerating(true); setError(null); setHistoryPaper(null);
     try {
       const picks = [];
       for (const subj of subjects) for (const type of TYPE_LABEL_CHOICES) {
@@ -204,10 +216,8 @@ export default function App() {
       if (picks.length === 0) { setGenerating(false); return; }
       const p = await compose({
         examType, subjects, picks, sections, planId,
-        listQuestions: async ({ subject, type, sections: segs, pid }) => {
-          const { listQuestions } = await import('./lib/db.js');
-          return listQuestions({ examType, subject, type, sections: segs, planId: pid });
-        }
+        listQuestions: async ({ subject, type, sections: segs, pid }) =>
+          listQuestions({ examType, subject, type, sections: segs, planId: pid }),
       });
       const now = new Date();
       p.title = title || `${examType} · ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
@@ -289,6 +299,14 @@ export default function App() {
     }
     return data;
   }, [planId, aggRemain, usedMap, subjects]);
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading-screen">加载中…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -458,9 +476,22 @@ export default function App() {
       </aside>
 
       <main className="main">
-        {!paper && <div className="empty-hint">← 选择考试类型、篇章、难度分类，配好题型数量后点「组卷」</div>}
+        {!paper && (
+          <div className="empty-hint">
+            <div className="empty-hint-title">👈 开始使用</div>
+            <ol className="empty-hint-steps">
+              <li>选择 <b>考试类型</b>（数一/数二）</li>
+              <li>选择 <b>篇章</b>（高数/线代/概率）</li>
+              <li>选择 <b>难度分类</b>（基础/综合/拓展）</li>
+              <li>点 <b>+ 新建方案</b> 创建组卷方案</li>
+              <li>配好各题型数量，点 <b>组卷</b></li>
+            </ol>
+            {!planId && <div className="empty-hint-warn">⚠ 需先创建组卷方案才能组卷</div>}
+          </div>
+        )}
         {paper && <PaperView paper={paper} onRegen={doCompose} isHistory={!!historyPaper} onCloseHistory={() => { setHistoryPaper(null); setPaper(null); }} />}
       </main>
+      {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
@@ -504,6 +535,47 @@ function ChoiceContent({ content }) {
       </span>
     </span>
   );
+}
+
+// 按章节+难度归组题目来源，用于卷面底部汇总
+function buildSourceFooter(grouped) {
+  const TYPE_ORDER = { 选择题: 0, 填空题: 1, 解答题: 2 };
+  const SECTION_ORDER = { '基础': 0, '综合': 1, '拓展': 2 };
+  const chapMap = {};
+  for (const ty of ['选择题', '填空题', '解答题']) {
+    for (const q of (grouped[ty] || [])) {
+      const key = (q.chapter_order ?? 9999) + '|||' + (q.bank_name || '') + '|||' + (q.chapter_name || '未知章节') + '|||' + (q.section || '');
+      (chapMap[key] = chapMap[key] || []).push(q);
+    }
+  }
+  const chapKeys = Object.keys(chapMap).sort((a, b) => {
+    const pa = a.split('|||'), pb = b.split('|||');
+    const oa = parseInt(pa[0], 10) || 0, ob = parseInt(pb[0], 10) || 0;
+    if (oa !== ob) return oa - ob;
+    return (SECTION_ORDER[pa[3]] ?? 9) - (SECTION_ORDER[pb[3]] ?? 9);
+  });
+  return chapKeys.map(key => {
+    const qs = chapMap[key];
+    const parts = key.split('|||');
+    const chapter = parts[2] || '未知章节';
+    const section = parts[3] || '';
+    const bn = parts[1] || chapter;
+    const m = bn.match(/^(.*?)([一-鿿]+篇)$/);
+    const src = m ? m[2] : bn;
+    const byType = { 选择题: [], 填空题: [], 解答题: [] };
+    for (const q of qs) if (byType[q.type]) byType[q.type].push(q);
+    for (const t of ['选择题', '填空题', '解答题']) byType[t].sort((a, b) => a.paper_no - b.paper_no);
+    const typeParts = ['选择题', '填空题', '解答题']
+      .map(t => {
+        const arr = byType[t];
+        if (!arr.length) return null;
+        const paperNos = arr.map(q => q.paper_no).join('、');
+        const bookNos = arr.map(q => q.num || '?').join('、');
+        return t + '卷面第' + paperNos + '题（书第' + bookNos + '题）';
+      })
+      .filter(Boolean);
+    return { src, chapter, section, typeParts };
+  });
 }
 
 function PaperView({ paper, onRegen, isHistory, onCloseHistory }) {
@@ -565,54 +637,12 @@ function PaperView({ paper, onRegen, isHistory, onCloseHistory }) {
         {/* 题目来源汇总（卷面底部，按章节+难度分类归组，方便纸质试卷翻阅） */}
         <div className="paper-source-footer">
           <div className="paper-source-title">题目来源</div>
-          {(() => {
-            // 按 chapter + section 归组（基础/综合/拓展分开），避免同学段不同分类的题号混淆
-            const chapMap = {};
-            for (const ty of TYPE_LABEL_CHOICES) {
-              for (const q of grouped[ty]) {
-                const key = (q.chapter_order ?? 9999) + '|||' + (q.bank_name || '') + '|||' + (q.chapter_name || '未知章节') + '|||' + (q.section || '');
-                (chapMap[key] = chapMap[key] || []).push(q);
-              }
-            }
-            const chapKeys = Object.keys(chapMap).sort((a, b) => {
-              const pa = a.split('|||');
-              const pb = b.split('|||');
-              const oa = parseInt(pa[0], 10) || 0;
-              const ob = parseInt(pb[0], 10) || 0;
-              if (oa !== ob) return oa - ob;
-              // 同章节按 基础→综合→拓展 排序
-              const order = { '基础': 0, '综合': 1, '拓展': 2 };
-              return (order[pa[3]] ?? 9) - (order[pb[3]] ?? 9);
-            });
-            return chapKeys.map(key => {
-              const qs = chapMap[key];
-              const parts = key.split('|||');
-              const chapter = parts[2] || '未知章节';
-              const section = parts[3] || '';
-              const bn = parts[1] || chapter;
-              const m = bn.match(/^(.*?)([一-鿿]+篇)$/);
-              const src = m ? m[2] : bn.replace(/^.*[一-鿿]([一-鿿]{0,4})$/, '$1') || bn;
-              // 章节内按题型分组（选择→填空→解答），题型内按卷面号排序
-              const byType = { 选择题: [], 填空题: [], 解答题: [] };
-              for (const q of qs) if (byType[q.type]) byType[q.type].push(q);
-              for (const t of TYPE_LABEL_CHOICES) byType[t].sort((a, b) => a.paper_no - b.paper_no);
-              const typeParts = TYPE_LABEL_CHOICES
-                .map(t => {
-                  const arr = byType[t];
-                  if (!arr.length) return null;
-                  const paperNos = arr.map(q => q.paper_no).join('、');
-                  const bookNos = arr.map(q => q.num || '?').join('、');
-                  return t + '卷面第' + paperNos + '题（书第' + bookNos + '题）';
-                })
-                .filter(Boolean);
-              return (
-                <div key={key} className="paper-source-chapter">
-                  <span className="paper-source-group-title">《{src}》{chapter}（{section}）：</span>
-                  <span className="paper-source-item">{typeParts.join('；')}</span>
-                </div>
-              );
-            });
-          })()}
+          {buildSourceFooter(grouped).map(({ src, chapter, section, typeParts }, i) => (
+            <div key={i} className="paper-source-chapter">
+              <span className="paper-source-group-title">《{src}》{chapter}（{section}）：</span>
+              <span className="paper-source-item">{typeParts.join('；')}</span>
+            </div>
+          ))}
         </div>
       </div>
     </>
