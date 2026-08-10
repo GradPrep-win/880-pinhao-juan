@@ -177,6 +177,13 @@ body {
   font-weight: 600;
 }
 
+.section-hint { float: right; font-weight: 400; font-size: 11px; color: #888; }
+.section-action { float: right; font-weight: 400; font-size: 11px; color: var(--accent); cursor: pointer; }
+
+.plan-name-row { padding: 0 14px 10px; display: flex; gap: 6px; align-items: center; }
+.plan-name-row .title-input { margin: 0; flex: 1; }
+.plan-name-row .section-btn { flex-shrink: 0; padding: 6px 12px; }
+
 .chapter-list { padding: 0 10px 12px; }
 .chapter-row {
   display: flex;
@@ -355,6 +362,11 @@ body {
 .md-body table { border-collapse: collapse; margin: 0.5em auto; }
 .md-body th, .md-body td { border: 1px solid #ccc; padding: 0.2em 0.6em; }
 .md-body ul, .md-body ol { margin: 0.3em 0; padding-left: 1.5em; }
+
+/* === 错误边界 === */
+.error-boundary { padding: 40px; text-align: center; color: #dc2626; }
+.error-boundary button { margin-top: 12px; padding: 6px 16px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; background: #fff; }
+.error-boundary button:hover { border-color: var(--accent); color: var(--accent); }
 
 /* === 加载与 Toast === */
 .loading-screen {

@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { aggregateCounts, listQuestions, listPlans, createPlan, deletePlan, planUsedCounts, recordPlanUsage, recordPaperUsage, resetPaperUsage, updatePlanCounts, savePaper, listPapers, getPaper, deletePaper } from './lib/db.js';
 import { compose, TYPE_LABEL_CHOICES } from './lib/compose.js';
-import Markdown from './components/Markdown.tsx';
+import { PlanCard } from './components/PlanCard.jsx';
+import { HistoryCard } from './components/HistoryCard.jsx';
+import { CountsTable } from './components/CountsTable.jsx';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
+import { PaperView } from './components/PaperView.jsx';
 import './App.css';
 
 const EXAM_TYPES = ['数一', '数二'];
@@ -22,285 +26,254 @@ function defaultCountsFor(examType, subjects) {
 }
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
-  const [examType, setExamType] = useState('数一');
-  const [subjects, setSubjects] = useState(['高数篇']);
-  const [counts, setCounts] = useState({ '高数篇': { 选择题: 4, 填空题: 4, 解答题: 4 } });
-  const [sections, setSections] = useState(['基础']);
-  const [title, setTitle] = useState('');
-  const [aggRemain, setAggRemain] = useState({});
-  const [aggLoaded, setAggLoaded] = useState(false);
-  const [paper, setPaper] = useState(null);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
-  }, []);
-
-  // 方案
-  const [plans, setPlans] = useState([]);
-  const [planId, setPlanId] = useState(null);
-  const [usedMap, setUsedMap] = useState({});
-  const [showPlanName, setShowPlanName] = useState(false);
-  const [planNameInput, setPlanNameInput] = useState('');
-
-  // 组卷历史
+  // ── 分组状态 ──
+  const [ui, setUi] = useState({ loading: true, generating: false, error: null, toast: null });
+  const [config, setConfig] = useState({
+    examType: '数一',
+    subjects: ['高数篇'],
+    counts: { '高数篇': { 选择题: 4, 填空题: 4, 解答题: 4 } },
+    sections: ['基础'],
+    title: '',
+  });
+  const [data, setData] = useState({ aggRemain: {}, aggLoaded: false, paper: null, historyPaper: null });
+  const [planState, setPlanState] = useState({ plans: [], planId: null, usedMap: {}, showPlanName: false, planNameInput: '' });
   const [papers, setPapers] = useState([]);
-  const [historyPaper, setHistoryPaper] = useState(null); // 从历史载入查看的试卷
 
-  useEffect(() => {
-    // 预加载：触发数据库迁移，确保表结构就绪
-    aggregateCounts({ examType: '数一', subjects: ['高数篇'], sections: [] })
-      .then(() => setLoading(false))
-      .catch(e => { setError(String(e)); setLoading(false); });
+  const toastTimer = useRef(null);
+  const showToast = useCallback((msg) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setUi(s => ({ ...s, toast: msg }));
+    toastTimer.current = setTimeout(() => setUi(s => ({ ...s, toast: null })), 2500);
   }, []);
 
-  const SUBJS = SUBJECT_BY_EXAM[examType] || [];
+  // ── 派生值 ──
+  const SUBJS = SUBJECT_BY_EXAM[config.examType] || [];
+  const remainOf = useCallback((subj, type) => (data.aggRemain[subj] || {})[type] || 0, [data.aggRemain]);
 
-  // 余量聚合（含方案级扣除）— 组卷后也要刷新
-  useEffect(() => {
-    if (!examType || subjects.length === 0) { setAggRemain({}); setAggLoaded(false); return; }
-    setAggLoaded(false);
-    aggregateCounts({ examType, subjects, sections, planId }).then((r) => { setAggRemain(r); setAggLoaded(true); }).catch(() => { setAggRemain({}); setAggLoaded(true); });
-  }, [examType, subjects, sections, planId, paper]);
+  const totalQuestionCount = useMemo(() =>
+    config.subjects.reduce((s, subj) => s + TYPE_LABEL_CHOICES.reduce((a, t) => a + ((config.counts[subj] || {})[t] || 0), 0), 0),
+    [config.subjects, config.counts]
+  );
 
-  // 载入方案列表
-  const loadPlans = useCallback(async () => {
-    if (!examType || subjects.length === 0) { setPlans([]); return; }
+  const totalScore = useMemo(() =>
+    TYPE_LABEL_CHOICES.reduce((s, t) => s + config.subjects.reduce((a, subj) => a + ((config.counts[subj] || {})[t] || 0), 0) * SCORE[t], 0),
+    [config.subjects, config.counts]
+  );
+
+  const anyOver = data.aggLoaded && config.subjects.some(subj =>
+    TYPE_LABEL_CHOICES.some(t => ((config.counts[subj] || {})[t] || 0) > remainOf(subj, t))
+  );
+
+  // ── 初始化 ──
+  useEffect(function initDb() {
+    aggregateCounts({ examType: '数一', subjects: ['高数篇'], sections: [] })
+      .then(() => setUi(s => ({ ...s, loading: false })))
+      .catch(e => setUi(s => ({ ...s, error: String(e), loading: false })));
+  }, []);
+
+  // ── 数据加载回调（稳定引用） ──
+  const loadPlans = useCallback(async (examType, subjects, currentPlanId) => {
+    if (!examType || subjects.length === 0) { setPlanState(s => ({ ...s, plans: [] })); return; }
     const p = await listPlans({ examType, subjects });
-    setPlans(p);
-    if (planId && !p.some(x => x.id === planId)) setPlanId(null);
-  }, [examType, subjects, planId]);
+    setPlanState(s => ({ ...s, plans: p, planId: currentPlanId && p.some(x => x.id === currentPlanId) ? currentPlanId : null }));
+  }, []);
 
-  useEffect(() => { loadPlans(); }, [loadPlans]);
-
-  // 载入组卷历史
-  const loadPapers = useCallback(async () => {
+  const loadPapers = useCallback(async (examType) => {
     if (!examType) { setPapers([]); return; }
     try { setPapers(await listPapers(examType)); } catch { setPapers([]); }
-  }, [examType]);
+  }, []);
 
-  useEffect(() => { loadPapers(); }, [loadPapers]);
+  // ── 副作用 ──
+  useEffect(function fetchAggCounts() {
+    if (!config.examType || config.subjects.length === 0) { setData(s => ({ ...s, aggRemain: {}, aggLoaded: false })); return; }
+    setData(s => ({ ...s, aggLoaded: false }));
+    aggregateCounts({ examType: config.examType, subjects: config.subjects, sections: config.sections, planId: planState.planId })
+      .then(r => setData(s => ({ ...s, aggRemain: r, aggLoaded: true })))
+      .catch(() => setData(s => ({ ...s, aggRemain: {}, aggLoaded: true })));
+  }, [config.examType, config.subjects, config.sections, planState.planId, data.paper]);
 
-  // 保存刚组出的卷子到历史
-  const saveToHistory = useCallback(async (p) => {
-    try {
-      await savePaper({
-        title: p.title,
-        examType: p.examType,
-        subjects: p.subjects,
-        sections: p.sections,
-        counts: p.counts,
-        totalScore: p.totalScore,
-        questions: p.questions,
-      });
-      loadPapers();
-    } catch (e) { setError('保存历史失败: ' + e.message); }
-  }, [examType, loadPapers]);
+  useEffect(function syncPlans() { loadPlans(config.examType, config.subjects, planState.planId); }, [config.examType, config.subjects, planState.planId, loadPlans]);
+  useEffect(function syncPapers() { loadPapers(config.examType); }, [config.examType, loadPapers]);
 
-  // 载入方案已用题量
-  useEffect(() => {
-    if (!planId) { setUsedMap({}); return; }
-    planUsedCounts({ planId }).then(setUsedMap).catch(() => setUsedMap({}));
-  }, [planId, paper]); // 组卷后刷新
+  useEffect(function syncUsedCounts() {
+    if (!planState.planId) { setPlanState(s => ({ ...s, usedMap: {} })); return; }
+    planUsedCounts({ planId: planState.planId }).then(u => setPlanState(s => ({ ...s, usedMap: u }))).catch(() => setPlanState(s => ({ ...s, usedMap: {} })));
+  }, [planState.planId, data.paper]);
 
+  // ── 事件处理 ──
   function handleExamTypeChange(et) {
-    setExamType(et);
-    const defs = (SUBJECT_BY_EXAM[et] || ['高数篇']).slice(0, 1);
-    setSubjects(defs);
-    setCounts(defaultCountsFor(et, defs));
-    setTitle(''); setPaper(null); setPlanId(null);
+    setConfig(s => {
+      const defs = (SUBJECT_BY_EXAM[et] || ['高数篇']).slice(0, 1);
+      return { ...s, examType: et, subjects: defs, counts: defaultCountsFor(et, defs), title: '' };
+    });
+    setData(s => ({ ...s, paper: null }));
+    setPlanState(s => ({ ...s, planId: null }));
   }
 
   function toggleSubject(subj) {
-    setSubjects(prev => {
-      let next;
-      if (prev.includes(subj)) { if (prev.length === 1) return prev; next = prev.filter(s => s !== subj); }
-      else next = [...prev, subj];
-      setCounts(c => { const nc = {}; for (const s of next) nc[s] = c[s] ? { ...c[s] } : { ...defaultCountsFor(examType, [s])[s] }; return nc; });
-      setPlanId(null);
-      return next;
+    setConfig(s => {
+      const prev = s.subjects;
+      if (prev.includes(subj)) { if (prev.length === 1) return s; }
+      const next = prev.includes(subj) ? prev.filter(x => x !== subj) : [...prev, subj];
+      const nc = {};
+      for (const sub of next) nc[sub] = s.counts[sub] ? { ...s.counts[sub] } : { ...defaultCountsFor(s.examType, [sub])[sub] };
+      return { ...s, subjects: next, counts: nc };
     });
-    setPaper(null);
+    setData(s => ({ ...s, paper: null }));
+    setPlanState(s => ({ ...s, planId: null }));
   }
 
-  // 难度分类：点击切换该分类的选中状态（多选）
   function toggleSection(sec) {
-    setSections(prev => prev.includes(sec) ? prev.filter(s => s !== sec) : [...prev, sec]);
-    setPaper(null); setPlanId(null);
+    setConfig(s => ({ ...s, sections: s.sections.includes(sec) ? s.sections.filter(x => x !== sec) : [...s.sections, sec] }));
+    setData(s => ({ ...s, paper: null }));
+    setPlanState(s => ({ ...s, planId: null }));
   }
 
-  // 只保留当前分类，取消其他分类（单选）
   function selectSectionOnly(sec) {
-    setSections([sec]);
-    setPaper(null); setPlanId(null);
+    setConfig(s => ({ ...s, sections: [sec] }));
+    setData(s => ({ ...s, paper: null }));
+    setPlanState(s => ({ ...s, planId: null }));
   }
 
-  function selectPlan(p) {
+  const selectPlan = useCallback((p) => {
     if (!p) return;
-    setPlanId(p.id);
+    setPlanState(s => ({ ...s, planId: p.id }));
     try {
       const c = JSON.parse(p.counts);
-      setCounts(c);
-      const secs = JSON.parse(p.sections || '[]');
-      if (secs.length > 0) setSections(secs);
+      setConfig(s => ({ ...s, counts: c, sections: JSON.parse(p.sections || '[]') }));
     } catch {}
-  }
+  }, []);
 
   function openSavePlan() {
-    setPlanNameInput(`${examType}·${subjects.join('+')} 方案${plans.length + 1}`);
-    setShowPlanName(true);
+    setPlanState(s => ({ ...s, planNameInput: `${config.examType}·${config.subjects.join('+')} 方案${planState.plans.length + 1}`, showPlanName: true }));
   }
 
   async function confirmSavePlan() {
-    const name = planNameInput.trim();
-    if (!name) { setShowPlanName(false); return; }
-    const id = await createPlan({ examType, subjects, sections: sections.length < 3 ? sections : [], counts, name });
-    setShowPlanName(false);
-    await loadPlans();
-    setPlanId(id);
+    const name = planState.planNameInput.trim();
+    if (!name) { setPlanState(s => ({ ...s, showPlanName: false })); return; }
+    const id = await createPlan({ examType: config.examType, subjects: config.subjects, sections: config.sections.length < 3 ? config.sections : [], counts: config.counts, name });
+    setPlanState(s => ({ ...s, showPlanName: false }));
+    await loadPlans(config.examType, config.subjects, id);
+    setPlanState(s => ({ ...s, planId: id }));
     showToast(`方案「${name}」已创建`);
   }
 
   async function removePlan(p) {
     if (!confirm(`删除方案「${p.name}」？已组卷子的去重记录将一并清除。`)) return;
     await deletePlan(p.id);
-    if (planId === p.id) setPlanId(null);
-    await loadPlans();
+    if (planState.planId === p.id) setPlanState(s => ({ ...s, planId: null }));
+    await loadPlans(config.examType, config.subjects, planState.planId);
   }
 
-  async function loadHistoryPaper(id) {
+  const loadHistoryPaper = useCallback(async (id) => {
     try {
       const raw = await getPaper(id);
       if (!raw) return;
-      const qs = JSON.parse(raw.questions || '[]');
       const p = {
-        id: raw.id,
-        title: raw.title,
-        examType: raw.exam_type,
+        id: raw.id, title: raw.title, examType: raw.exam_type,
         subjects: JSON.parse(raw.subjects || '[]'),
         sections: JSON.parse(raw.sections || '[]'),
         counts: JSON.parse(raw.counts || '{}'),
         totalScore: raw.total_score,
-        questions: qs, // paper_no 已由 compose 连续编号，直接保留
+        questions: JSON.parse(raw.questions || '[]'),
       };
-      setHistoryPaper(p);
-      setPaper(p);
-    } catch (e) { setError('载入历史记录失败: ' + e.message); }
-  }
+      setData(s => ({ ...s, historyPaper: p, paper: p }));
+    } catch (e) { setUi(s => ({ ...s, error: '载入历史记录失败: ' + e.message })); }
+  }, []);
 
-  async function removePaper(pp) {
+  const removePaper = useCallback(async (pp) => {
     if (!confirm(`删除组卷记录「${pp.title}」？`)) return;
     await deletePaper(pp.id);
-    if (historyPaper && historyPaper.id === pp.id) { setHistoryPaper(null); setPaper(null); }
-    await loadPapers();
-  }
+    setData(s => (s.historyPaper && s.historyPaper.id === pp.id) ? { ...s, historyPaper: null, paper: null } : s);
+    await loadPapers(config.examType);
+  }, [loadPapers, config.examType]);
 
-  const rowTotal = (type) => subjects.reduce((s, subj) => s + ((counts[subj] || {})[type] || 0), 0);
-  const totalScore = TYPE_LABEL_CHOICES.reduce((s, t) => s + rowTotal(t) * SCORE[t], 0);
-  const remainOf = (subj, type) => (aggRemain[subj] || {})[type] || 0;
-  const anyOver = aggLoaded && subjects.some(subj => TYPE_LABEL_CHOICES.some(t => ((counts[subj] || {})[t] || 0) > remainOf(subj, t)));
+  const saveToHistory = useCallback(async (p) => {
+    try {
+      await savePaper({ title: p.title, examType: p.examType, subjects: p.subjects, sections: p.sections, counts: p.counts, totalScore: p.totalScore, questions: p.questions });
+      await loadPapers(p.examType);
+    } catch (e) { setUi(s => ({ ...s, error: '保存历史失败: ' + e.message })); }
+  }, [loadPapers]);
 
   const doCompose = useCallback(async () => {
-    if (subjects.length === 0 || generating) return;
-    setGenerating(true); setError(null); setHistoryPaper(null);
+    if (config.subjects.length === 0 || ui.generating) return;
+    setUi(s => ({ ...s, generating: true, error: null }));
+    setData(s => ({ ...s, historyPaper: null }));
     try {
       const picks = [];
-      for (const subj of subjects) for (const type of TYPE_LABEL_CHOICES) {
-        const c = (counts[subj] || {})[type] || 0;
+      for (const subj of config.subjects) for (const type of TYPE_LABEL_CHOICES) {
+        const c = (config.counts[subj] || {})[type] || 0;
         if (c > 0) picks.push({ subject: subj, type, count: c });
       }
-      if (picks.length === 0) { setGenerating(false); return; }
+      if (picks.length === 0) { setUi(s => ({ ...s, generating: false })); return; }
       const p = await compose({
-        examType, subjects, picks, sections, planId,
+        examType: config.examType, subjects: config.subjects, picks, sections: config.sections, planId: planState.planId,
         listQuestions: async ({ subject, type, sections: segs, pid }) =>
-          listQuestions({ examType, subject, type, sections: segs, planId: pid }),
+          listQuestions({ examType: config.examType, subject, type, sections: segs, planId: pid }),
       });
       const now = new Date();
-      p.title = title || `${examType} · ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-      p.examType = examType;
-      p.subjects = subjects;
-      p.sections = sections;
-      p.counts = counts;
+      p.title = config.title || `${config.examType} · ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+      p.examType = config.examType;
+      p.subjects = config.subjects;
+      p.sections = config.sections;
+      p.counts = config.counts;
       p.totalScore = totalScore;
-      setPaper(p);
-      // 保存到组卷历史
+      setData(s => ({ ...s, paper: p }));
       saveToHistory(p);
-      // 记录方案已用题
-      if (planId) {
-        await recordPlanUsage(planId, p.questions.map(q => q.id));
-        const u = await planUsedCounts({ planId });
-        setUsedMap(u);
+      if (planState.planId) {
+        await recordPlanUsage(planState.planId, p.questions.map(q => q.id));
+        const u = await planUsedCounts({ planId: planState.planId });
+        setPlanState(s => ({ ...s, usedMap: u }));
       }
-      // 记录全局已用题（跨组卷去重）
       await recordPaperUsage(p.questions.map(q => q.id));
     } catch (e) {
-      setError(e.message || '组卷失败');
+      setUi(s => ({ ...s, error: e.message || '组卷失败' }));
     } finally {
-      setGenerating(false);
-      // 组卷后滚动到顶部，确保 toolbar 可见
-      setTimeout(() => {
-        const main = document.querySelector('.main');
-        if (main) main.scrollTop = 0;
-      }, 100);
+      setUi(s => ({ ...s, generating: false }));
+      setTimeout(() => { const main = document.querySelector('.main'); if (main) main.scrollTop = 0; }, 100);
     }
-  }, [examType, subjects, counts, sections, title, generating, planId, saveToHistory, totalScore]);
+  }, [config.examType, config.subjects, config.counts, config.sections, config.title, ui.generating, planState.planId, saveToHistory, totalScore]);
 
-  const updateCount = (subj, type, val) => {
-    setCounts(prev => ({ ...prev, [subj]: { ...(prev[subj] || {}), [type]: Math.max(0, +val || 0) } }));
-  };
+  const updateCount = useCallback((subj, type, val) => {
+    setConfig(s => ({ ...s, counts: { ...s.counts, [subj]: { ...(s.counts[subj] || {}), [type]: Math.max(0, +val || 0) } } }));
+  }, []);
 
-  // 把当前题数保存回方案
   const savePlanCounts = useCallback(async () => {
-    if (!planId) return;
-    try {
-      await updatePlanCounts({ planId, counts });
-    } catch (e) {
-      setError('保存方案题数失败: ' + e.message);
-    }
-  }, [planId, counts]);
+    if (!planState.planId) return;
+    try { await updatePlanCounts({ planId: planState.planId, counts: config.counts }); }
+    catch (e) { setUi(s => ({ ...s, error: '保存方案题数失败: ' + e.message })); }
+  }, [planState.planId, config.counts]);
 
-  // 重置全局已用题（跨组卷去重缓存）
   const handleResetUsed = useCallback(async () => {
     if (!confirm('确定重置已用题记录？重置后，之前组过的题目可以再次被抽到。')) return;
     try {
       await resetPaperUsage();
-      setAggRemain({});
-      aggregateCounts({ examType, subjects, sections, planId }).then((r) => { setAggRemain(r); setAggLoaded(true); }).catch(() => {});
-      // 同步刷新方案进度条
-      if (planId) {
-        const u = await planUsedCounts({ planId });
-        setUsedMap(u);
+      setData(s => ({ ...s, aggRemain: {} }));
+      aggregateCounts({ examType: config.examType, subjects: config.subjects, sections: config.sections, planId: planState.planId })
+        .then(r => setData(s => ({ ...s, aggRemain: r, aggLoaded: true }))).catch(() => {});
+      if (planState.planId) {
+        const u = await planUsedCounts({ planId: planState.planId });
+        setPlanState(s => ({ ...s, usedMap: u }));
       }
-    } catch (e) {
-      setError('重置失败: ' + e.message);
-    }
-  }, [examType, subjects, sections, planId]);
+    } catch (e) { setUi(s => ({ ...s, error: '重置失败: ' + e.message })); }
+  }, [config.examType, config.subjects, config.sections, planState.planId]);
 
-  // 方案进度条数据：每题型 已用/总量
   const planProgress = useMemo(() => {
-    if (!planId) return null;
-    const total = {}; // subject|type -> total pool
-    const remain = aggRemain;
-    const used = usedMap;
-    const data = [];
-    for (const t of TYPE_LABEL_CHOICES) {
+    if (!planState.planId) return null;
+    return TYPE_LABEL_CHOICES.map(t => {
       let usedSum = 0, totalSum = 0;
-      for (const subj of subjects) {
-        const r = remain[subj]?.[t] || 0;
-        const u = used[subj]?.[t] || 0;
+      for (const subj of config.subjects) {
+        const r = data.aggRemain[subj]?.[t] || 0;
+        const u = planState.usedMap[subj]?.[t] || 0;
         totalSum += r + u;
         usedSum += u;
       }
-      data.push({ type: t, used: usedSum, total: totalSum });
-    }
-    return data;
-  }, [planId, aggRemain, usedMap, subjects]);
+      return { type: t, used: usedSum, total: totalSum };
+    });
+  }, [planState.planId, planState.usedMap, config.subjects, data.aggRemain]);
 
-  if (loading) {
+  // ── 渲染 ──
+  if (ui.loading) {
     return (
       <div className="app">
         <div className="loading-screen">加载中…</div>
@@ -309,342 +282,119 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <aside className="sidebar">
-        <h1>📝 880AutoPaper<span className="sub">考研数学智能组卷</span></h1>
+    <ErrorBoundary>
+      <div className="app">
+        <aside className="sidebar">
+          <h1>📝 880AutoPaper<span className="sub">考研数学智能组卷</span></h1>
 
-        <div className="section-title">考试类型</div>
-        <div className="exam-tabs">
-          {EXAM_TYPES.map(et => (
-            <button key={et} className={'exam-tab ' + (et === examType ? 'active' : '')} onClick={() => handleExamTypeChange(et)}>{et}</button>
-          ))}
-        </div>
-
-        <div className="section-title">篇章（可多选，为每个篇章独立配比）</div>
-        <div className="subject-list">
-          {SUBJS.map(subj => {
-            const qCount = aggRemain[subj] ? TYPE_LABEL_CHOICES.reduce((s,t)=>s+(aggRemain[subj][t]||0),0) : '…';
-            return (
-              <button key={subj} className={'subject-btn ' + (subjects.includes(subj) ? 'active' : '')} onClick={() => toggleSubject(subj)}>
-                {subj} <span className="cnt">({qCount})</span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="section-title">难度分类（点击单选，Ctrl/Cmd+点击可多选）<span style={{float:'right',fontWeight:400,fontSize:11,color:'#888'}}>已选：{sections.join('+')}</span></div>
-        <div className="section-list">
-          {ALL_SECTIONS.map(sec => (
-            <button key={sec} className={'section-btn ' + (sections.includes(sec) ? 'active' : '')}
-              onClick={e => { if (e.ctrlKey || e.metaKey) toggleSection(sec); else selectSectionOnly(sec); }}
-              title="点击=仅选此项，Ctrl+点击=多选">{sec}</button>
-          ))}
-        </div>
-
-        {/* 方案 */}
-        <div className="section-title">
-          我的组卷方案
-          <span style={{float:'right',fontWeight:400,fontSize:11,cursor:'pointer',color:'var(--accent)'}} onClick={openSavePlan}>+ 新建方案</span>
-        </div>
-        <div style={{clear:'both'}} />
-        {showPlanName && (
-          <div style={{padding:'0 14px 10px',display:'flex',gap:6,alignItems:'center'}}>
-            <input className="title-input" style={{margin:0,flex:1}} value={planNameInput} autoFocus
-              onChange={e=>setPlanNameInput(e.target.value)}
-              onKeyDown={e=>{if(e.key==='Enter')confirmSavePlan();if(e.key==='Escape')setShowPlanName(false);}}
-              placeholder="方案名称" />
-            <button className="section-btn" style={{flexShrink:0,padding:'6px 12px'}} onClick={confirmSavePlan}>保存</button>
-            <button className="section-btn" style={{flexShrink:0,padding:'6px 12px'}} onClick={()=>setShowPlanName(false)}>取消</button>
-          </div>
-        )}
-        <div className="plan-list">
-          {plans.length === 0 && <div className="plan-empty">还没有方案，配好上方参数后点「+ 保存」创建</div>}
-          {plans.map(p => {
-            const active = planId === p.id;
-            let pc = {};
-            try { pc = JSON.parse(p.counts); } catch {}
-            return (
-              <div key={p.id} className={'plan-card ' + (active ? 'active' : '')} onClick={() => selectPlan(p)}>
-                <div className="plan-head">
-                  <span className="plan-name">{p.name}</span>
-                  {active && <span className="plan-badge">使用中</span>}
-                  <button className="plan-del" onClick={(e)=>{e.stopPropagation();removePlan(p);}} title="删除方案">✕</button>
-                </div>
-                <div className="plan-summary">
-                  {subjects.map(s => <span key={s} className="plan-chip">{s}{(pc[s]||{}).选择题||0}选{(pc[s]||{}).填空题||0}填{(pc[s]||{}).解答题||0}解</span>)}
-                </div>
-                {active && (
-                  <div className="plan-bars">
-                    {(planProgress && planProgress.length ? planProgress : TYPE_LABEL_CHOICES.map(t => ({ type: t, used: 0, total: 0 }))).map(b => {
-                      const pct = b.total > 0 ? (b.used / b.total) * 100 : 0;
-                      const col = pct < 30 ? '#22c55e' : pct < 70 ? '#f59e0b' : '#ef4444';
-                      return (
-                        <div key={b.type} className="plan-bar-row">
-                          <span className="plan-bar-label">{b.type}</span>
-                          <div className="plan-bar-track"><div className="plan-bar-fill" style={{width: (b.total > 0 ? pct : 0) + '%', background: b.total > 0 ? col : '#ddd'}} /></div>
-                          <span className="plan-bar-val">{b.used}/{b.total || '—'}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 组卷历史 */}
-        <div className="section-title">组卷历史</div>
-        <div style={{clear:'both'}} />
-        <div className="history-list">
-          {papers.length === 0 && <div className="plan-empty">还没有组卷记录，组卷后自动保存</div>}
-          {papers.map(pp => {
-            const d = new Date(pp.created_at);
-            const dt = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-            const qids = (() => { try { return JSON.parse(pp.questions || '[]'); } catch { return []; } })();
-            return (
-              <div key={pp.id} className={'history-card ' + (historyPaper && historyPaper.id === pp.id ? 'active' : '')} onClick={() => loadHistoryPaper(pp.id)}>
-                <div className="plan-head">
-                  <span className="plan-name">{pp.title}</span>
-                  <button className="plan-del" onClick={(e)=>{e.stopPropagation();removePaper(pp);}} title="删除记录">✕</button>
-                </div>
-                <div className="plan-summary">
-                  <span className="plan-chip">{pp.exam_type}</span>
-                  <span className="plan-chip">{qids.length}题 {pp.total_score}分</span>
-                  <span className="plan-chip">{dt}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="section-title">各篇章题型数量</div>
-        <div className="difficulty-table">
-          <table>
-            <thead><tr><th>题型</th>{subjects.map(s => <th key={s}>{s}</th>)}<th>合计</th></tr></thead>
-            <tbody>
-              {TYPE_LABEL_CHOICES.map(t => (
-                <tr key={t}>
-                  <td>{t}</td>
-                  {subjects.map(subj => {
-                    const val = (counts[subj] || {})[t] || 0;
-                    const rem = remainOf(subj, t);
-                    const over = val > rem;
-                    return (
-                      <td key={subj}>
-                        <div className="num-cell">
-                          <input type="number" min="0" value={val} className={over ? 'over' : ''}
-                            onChange={e => updateCount(subj, t, e.target.value)} />
-                          <span className={'remain ' + (over ? 'over' : '')}>
-                            {over ? `不足 ${val - rem}` : `剩 ${rem}`}
-                          </span>
-                        </div>
-                      </td>
-                    );
-                  })}
-                  <td className="rowtotal"><b>{rowTotal(t)}</b><small> × {SCORE[t]} = {rowTotal(t) * SCORE[t]}</small></td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>合计</td>
-                {subjects.map(s => <td key={s} className="subtotal">{TYPE_LABEL_CHOICES.reduce((a,t)=>a+((counts[s]||{})[t]||0)*SCORE[t],0)}分</td>)}
-                <td className="totalscore">{totalScore}分</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        <div className="section-title">卷面标题（留空自动生成）</div>
-        <input className="title-input" type="text" placeholder="如：2026考研数学一模拟卷" value={title} onChange={e => setTitle(e.target.value)} />
-
-        {error && <div className="err">{error}</div>}
-        {anyOver && !historyPaper && <div className="warn">⚠ 部分题型数量超过剩余，超出部分按实际余量抽</div>}
-
-        {!planId && <div className="warn">⚠ 请先选择或创建一个组卷方案，再点组卷</div>}
-        <div className="compose-btns">
-          <button className="btn-primary" disabled={generating || subjects.length === 0 || !planId} onClick={doCompose}
-            title={!planId ? '请先选择或创建组卷方案' : ''}>
-            {generating ? '正在组卷…' : `组卷 (共 ${subjects.reduce((s,subj)=>s+TYPE_LABEL_CHOICES.reduce((a,t)=>a+((counts[subj]||{})[t]||0),0),0)} 题)`}
-          </button>
-          {planId && (
-            <button className="btn-secondary" onClick={savePlanCounts} title="把当前题数保存到方案">保存题数</button>
-          )}
-          <button className="btn-secondary" onClick={handleResetUsed} title="重置后，之前组过的题可再次被抽到">重置已用题</button>
-        </div>
-      </aside>
-
-      <main className="main">
-        {!paper && (
-          <div className="empty-hint">
-            <div className="empty-hint-title">👈 开始使用</div>
-            <ol className="empty-hint-steps">
-              <li>选择 <b>考试类型</b>（数一/数二）</li>
-              <li>选择 <b>篇章</b>（高数/线代/概率）</li>
-              <li>选择 <b>难度分类</b>（基础/综合/拓展）</li>
-              <li>点 <b>+ 新建方案</b> 创建组卷方案</li>
-              <li>配好各题型数量，点 <b>组卷</b></li>
-            </ol>
-            {!planId && <div className="empty-hint-warn">⚠ 需先创建组卷方案才能组卷</div>}
-          </div>
-        )}
-        {paper && <PaperView paper={paper} onRegen={doCompose} isHistory={!!historyPaper} onCloseHistory={() => { setHistoryPaper(null); setPaper(null); }} />}
-      </main>
-      {toast && <div className="toast">{toast}</div>}
-    </div>
-  );
-}
-
-// 选择题题干 + A/B/C/D 分离解析
-// 新题标记：行首的下一题题号 "(13)..." 或 "12) ..."；仅在其后存在完整 A/B/C/D 组时才视为拼接（避免误判题干里的编号）
-// 拼接题的切割点：行首题号，且前面已出现完整的 D. 选项（说明这是一道新题的开始）
-const NEXT_Q_MARKER = /(?:^|\n)\s*([(（]\d+[)）]|\d+[)）])\s*[一-鿿]/g;
-function findConcatSplit(content) {
-  let m;
-  NEXT_Q_MARKER.lastIndex = 0;
-  while ((m = NEXT_Q_MARKER.exec(content)) !== null) {
-    const before = content.slice(0, m.index);
-    if (/D\.\s*\S/.test(before) && content.slice(m.index).match(/A\.\s*[\s\S]*?B\.\s*[\s\S]*?C\./)) return m.index;
-  }
-  return -1;
-}
-function parseChoiceOptions(content) {
-  const cut = findConcatSplit(content);
-  const first = cut >= 0 ? content.slice(0, cut) : content;
-  const re = /([\s\S]*?)\s+A\.\s+([\s\S]*?)\s+B\.\s+([\s\S]*?)\s+C\.\s+([\s\S]*?)\s+D\.\s+([\s\S]*?)\s*$/;
-  const match = first.match(re);
-  if (!match) return null;
-  const stem = match[1].replace(/[（(]\s*[)）]\s*$/, "").trim();
-  return { stem, options: { A: match[2].trim(), B: match[3].trim(), C: match[4].trim(), D: match[5].trim() } };
-}
-
-function ChoiceContent({ content }) {
-  const parsed = parseChoiceOptions(content);
-  if (!parsed) return <Markdown content={content} />;
-  return (
-    <span className="choice-content">
-      {parsed.stem && <Markdown content={parsed.stem} />}
-      <span className="choice-options">
-        {['A','B','C','D'].map(k => (
-          <span key={k} className="choice-option">
-            <span className="choice-opt-label">{k}.</span>
-            <Markdown content={parsed.options[k]} />
-          </span>
-        ))}
-      </span>
-    </span>
-  );
-}
-
-// 按章节+难度归组题目来源，用于卷面底部汇总
-function buildSourceFooter(grouped) {
-  const TYPE_ORDER = { 选择题: 0, 填空题: 1, 解答题: 2 };
-  const SECTION_ORDER = { '基础': 0, '综合': 1, '拓展': 2 };
-  const chapMap = {};
-  for (const ty of ['选择题', '填空题', '解答题']) {
-    for (const q of (grouped[ty] || [])) {
-      const key = (q.chapter_order ?? 9999) + '|||' + (q.bank_name || '') + '|||' + (q.chapter_name || '未知章节') + '|||' + (q.section || '');
-      (chapMap[key] = chapMap[key] || []).push(q);
-    }
-  }
-  const chapKeys = Object.keys(chapMap).sort((a, b) => {
-    const pa = a.split('|||'), pb = b.split('|||');
-    const oa = parseInt(pa[0], 10) || 0, ob = parseInt(pb[0], 10) || 0;
-    if (oa !== ob) return oa - ob;
-    return (SECTION_ORDER[pa[3]] ?? 9) - (SECTION_ORDER[pb[3]] ?? 9);
-  });
-  return chapKeys.map(key => {
-    const qs = chapMap[key];
-    const parts = key.split('|||');
-    const chapter = parts[2] || '未知章节';
-    const section = parts[3] || '';
-    const bn = parts[1] || chapter;
-    const m = bn.match(/^(.*?)([一-鿿]+篇)$/);
-    const src = m ? m[2] : bn;
-    const byType = { 选择题: [], 填空题: [], 解答题: [] };
-    for (const q of qs) if (byType[q.type]) byType[q.type].push(q);
-    for (const t of ['选择题', '填空题', '解答题']) byType[t].sort((a, b) => a.paper_no - b.paper_no);
-    const typeParts = ['选择题', '填空题', '解答题']
-      .map(t => {
-        const arr = byType[t];
-        if (!arr.length) return null;
-        const paperNos = arr.map(q => q.paper_no).join('、');
-        const bookNos = arr.map(q => q.num || '?').join('、');
-        return t + '卷面第' + paperNos + '题（书第' + bookNos + '题）';
-      })
-      .filter(Boolean);
-    return { src, chapter, section, typeParts };
-  });
-}
-
-function PaperView({ paper, onRegen, isHistory, onCloseHistory }) {
-  const [zoom, setZoom] = useState(1);
-  const grouped = { 选择题: [], 填空题: [], 解答题: [] };
-  for (const q of paper.questions) if (grouped[q.type]) grouped[q.type].push(q);
-
-  // Ctrl+滚轮 / Ctrl++/- 缩放，类似网页放大效果
-  useEffect(() => {
-    const onWheel = (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      e.preventDefault();
-      setZoom(z => Math.min(2, Math.max(0.5, z + (e.deltaY < 0 ? 0.1 : -0.1))));
-    };
-    const onKey = (e) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      if (e.key === '=' || e.key === '+') { e.preventDefault(); setZoom(z => Math.min(2, +(z + 0.1).toFixed(2))); }
-      else if (e.key === '-') { e.preventDefault(); setZoom(z => Math.max(0.5, +(z - 0.1).toFixed(2))); }
-      else if (e.key === '0') { e.preventDefault(); setZoom(1); }
-    };
-    window.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('keydown', onKey);
-    return () => { window.removeEventListener('wheel', onWheel); window.removeEventListener('keydown', onKey); };
-  }, []);
-
-  const zoomPct = Math.round(zoom * 100);
-  return (
-    <>
-      <div className="toolbar">
-        <button onClick={() => window.print()}>打印 / 导出 PDF</button>
-        {!isHistory && <button onClick={onRegen}>重新生成</button>}
-        {isHistory && <button onClick={onCloseHistory}>返回组卷</button>}
-        <div className="font-size-ctrl" title="Ctrl+滚轮 或 Ctrl++/- 缩放">
-          <button onClick={() => setZoom(z => Math.max(0.5, +(z - 0.1).toFixed(2)))}>－</button>
-          <span className="font-size-val">{zoomPct}%</span>
-          <button onClick={() => setZoom(z => Math.min(2, +(z + 0.1).toFixed(2)))}>＋</button>
-          <button onClick={() => setZoom(1)} className="zoom-reset">重置</button>
-        </div>
-        <span className="paper-meta">{paper.examType} · {paper.questions.length} 题 · {paper.totalScore} 分 · {paper.title}</span>
-      </div>
-      <div className="paper-page" style={{ zoom }}>
-        <div className="paper-header">
-          <h2>{paper.title}</h2>
-          <div className="meta">共 {paper.questions.length} 题 · 总分 {paper.totalScore} · 生成 {new Date().toLocaleDateString('zh-CN')}</div>
-        </div>
-        {TYPE_LABEL_CHOICES.map(ty => grouped[ty].length === 0 ? null : (
-          <div className="paper-section" key={ty}>
-            <h3>{ty}（{grouped[ty].length} 题）</h3>
-            {grouped[ty].map(q => (
-              <div className="paper-question" key={q.paper_no + '_' + q.id}>
-                <span className="paper-q-no">{q.paper_no}.</span>
-                <span className="paper-q-body">
-                  {ty === '选择题' ? <ChoiceContent content={q.content} /> : <Markdown content={q.content} />}
-                </span>
-              </div>
+          <div className="section-title">考试类型</div>
+          <div className="exam-tabs">
+            {EXAM_TYPES.map(et => (
+              <button key={et} className={'exam-tab ' + (et === config.examType ? 'active' : '')} onClick={() => handleExamTypeChange(et)}>{et}</button>
             ))}
           </div>
-        ))}
-        {/* 题目来源汇总（卷面底部，按章节+难度分类归组，方便纸质试卷翻阅） */}
-        <div className="paper-source-footer">
-          <div className="paper-source-title">题目来源</div>
-          {buildSourceFooter(grouped).map(({ src, chapter, section, typeParts }, i) => (
-            <div key={i} className="paper-source-chapter">
-              <span className="paper-source-group-title">《{src}》{chapter}（{section}）：</span>
-              <span className="paper-source-item">{typeParts.join('；')}</span>
+
+          <div className="section-title">篇章（可多选）</div>
+          <div className="subject-list">
+            {SUBJS.map(subj => {
+              const qCount = data.aggRemain[subj] ? TYPE_LABEL_CHOICES.reduce((s, t) => s + (data.aggRemain[subj][t] || 0), 0) : '…';
+              return (
+                <button key={subj} className={'subject-btn ' + (config.subjects.includes(subj) ? 'active' : '')} onClick={() => toggleSubject(subj)}>
+                  {subj} <span className="cnt">({qCount})</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="section-title">
+            难度分类（点击单选，Ctrl/Cmd+点击可多选）
+            <span className="section-hint">已选：{config.sections.join('+')}</span>
+          </div>
+          <div className="section-list">
+            {ALL_SECTIONS.map(sec => (
+              <button key={sec} className={'section-btn ' + (config.sections.includes(sec) ? 'active' : '')}
+                onClick={e => { if (e.ctrlKey || e.metaKey) toggleSection(sec); else selectSectionOnly(sec); }}
+                title="点击=仅选此项，Ctrl+点击=多选">{sec}</button>
+            ))}
+          </div>
+
+          {/* 方案 */}
+          <div className="section-title">
+            我的组卷方案
+            <span className="section-action" onClick={openSavePlan}>+ 新建方案</span>
+          </div>
+          <div style={{clear:'both'}} />
+          {planState.showPlanName && (
+            <div className="plan-name-row">
+              <input className="title-input" value={planState.planNameInput} autoFocus
+                onChange={e => setPlanState(s => ({ ...s, planNameInput: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') confirmSavePlan(); if (e.key === 'Escape') setPlanState(s => ({ ...s, showPlanName: false })); }}
+                placeholder="方案名称" />
+              <button className="section-btn" onClick={confirmSavePlan}>保存</button>
+              <button className="section-btn" onClick={() => setPlanState(s => ({ ...s, showPlanName: false }))}>取消</button>
             </div>
-          ))}
-        </div>
+          )}
+          <div className="plan-list">
+            {planState.plans.length === 0 && <div className="plan-empty">还没有方案，配好上方参数后点「+ 保存」创建</div>}
+            {planState.plans.map(p => (
+              <PlanCard key={p.id} plan={p} active={planState.planId === p.id} subjects={config.subjects}
+                progress={planProgress} onSelect={selectPlan} onDelete={removePlan} />
+            ))}
+          </div>
+
+          {/* 组卷历史 */}
+          <div className="section-title">组卷历史</div>
+          <div style={{clear:'both'}} />
+          <div className="history-list">
+            {papers.length === 0 && <div className="plan-empty">还没有组卷记录，组卷后自动保存</div>}
+            {papers.map(pp => (
+              <HistoryCard key={pp.id} paper={pp} active={data.historyPaper && data.historyPaper.id === pp.id}
+                onSelect={loadHistoryPaper} onDelete={removePaper} />
+            ))}
+          </div>
+
+          <div className="section-title">各篇章题型数量</div>
+          <CountsTable subjects={config.subjects} counts={config.counts} remainOf={remainOf} onUpdate={updateCount} />
+
+          <div className="section-title">卷面标题（留空自动生成）</div>
+          <input className="title-input" type="text" placeholder="如：2026考研数学一模拟卷" value={config.title} onChange={e => setConfig(s => ({ ...s, title: e.target.value }))} />
+
+          {ui.error && <div className="err">{ui.error}</div>}
+          {anyOver && !data.historyPaper && <div className="warn">⚠ 部分题型数量超过剩余，超出部分按实际余量抽</div>}
+          {!planState.planId && <div className="warn">⚠ 请先选择或创建一个组卷方案，再点组卷</div>}
+
+          <div className="compose-btns">
+            <button className="btn-primary" disabled={ui.generating || config.subjects.length === 0 || !planState.planId} onClick={doCompose}
+              title={!planState.planId ? '请先选择或创建组卷方案' : ''}>
+              {ui.generating ? '正在组卷…' : `组卷 (共 ${totalQuestionCount} 题)`}
+            </button>
+            {planState.planId && (
+              <button className="btn-secondary" onClick={savePlanCounts} title="把当前题数保存到方案">保存题数</button>
+            )}
+            <button className="btn-secondary" onClick={handleResetUsed} title="重置后，之前组过的题可再次被抽到">重置已用题</button>
+          </div>
+        </aside>
+
+        <main className="main">
+          {!data.paper ? (
+            <div className="empty-hint">
+              <div className="empty-hint-title">👈 开始使用</div>
+              <ol className="empty-hint-steps">
+                <li>选择 <b>考试类型</b>（数一/数二）</li>
+                <li>选择 <b>篇章</b>（高数/线代/概率）</li>
+                <li>选择 <b>难度分类</b>（基础/综合/拓展）</li>
+                <li>点 <b>+ 新建方案</b> 创建组卷方案</li>
+                <li>配好各题型数量，点 <b>组卷</b></li>
+              </ol>
+              {!planState.planId && <div className="empty-hint-warn">⚠ 需先创建组卷方案才能组卷</div>}
+            </div>
+          ) : (
+            <PaperView paper={data.paper} onRegen={doCompose} isHistory={!!data.historyPaper}
+              onCloseHistory={() => setData(s => ({ ...s, historyPaper: null, paper: null }))} />
+          )}
+        </main>
+        {ui.toast && <div className="toast">{ui.toast}</div>}
       </div>
-    </>
+    </ErrorBoundary>
   );
 }

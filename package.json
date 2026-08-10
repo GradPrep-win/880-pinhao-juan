@@ -60,6 +60,7 @@
       "target": "portable",
       "artifactName": "880AutoPaper.exe"
     },
+    "forceCodeSigning": false,
     "npmRebuild": false,
     "asarUnpack": [
       "node_modules/better-sqlite3/**"
