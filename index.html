@@ -3,231 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>880AutoPaper - 考研数学智能组卷系统</title>
+  <title>880AutoPaper - 考研数学智能组卷</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      color: #333;
-    }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 40px 20px;
-    }
-    .hero {
-      text-align: center;
-      color: white;
-      padding: 40px 0 30px;
-    }
-    .hero h1 {
-      font-size: 2.5em;
-      margin-bottom: 10px;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    }
-    .hero p {
-      font-size: 1.2em;
-      opacity: 0.95;
-    }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 32px;
-      margin: 24px 0;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    }
-    .card h2 {
-      font-size: 1.4em;
-      margin-bottom: 16px;
-      color: #333;
-    }
-    .features {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin: 20px 0;
-    }
-    .feature {
-      text-align: center;
-      padding: 20px 12px;
-      background: #f8f9ff;
-      border-radius: 12px;
-    }
-    .feature .icon { font-size: 2em; margin-bottom: 8px; }
-    .feature h3 { font-size: 1em; color: #555; margin-bottom: 4px; }
-    .feature p { font-size: 0.85em; color: #888; }
-    .btn-download {
-      display: block;
-      width: 100%;
-      max-width: 400px;
-      margin: 30px auto;
-      padding: 18px 40px;
-      font-size: 1.3em;
-      color: white;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      font-weight: bold;
-      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .btn-download:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
-    }
-    .file-info {
-      text-align: center;
-      color: #888;
-      font-size: 0.9em;
-      margin-top: 8px;
-    }
-    .steps { counter-reset: step; }
-    .steps li {
-      list-style: none;
-      padding: 12px 0 12px 50px;
-      position: relative;
-      border-bottom: 1px solid #f0f0f0;
-    }
-    .steps li:last-child { border-bottom: none; }
-    .steps li::before {
-      counter-increment: step;
-      content: counter(step);
-      position: absolute;
-      left: 0;
-      top: 10px;
-      width: 34px;
-      height: 34px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: bold;
-    }
-    .warning {
-      background: #fff8e1;
-      border-left: 4px solid #ffc107;
-      padding: 16px 20px;
-      border-radius: 0 8px 8px 0;
-      margin: 16px 0;
-      font-size: 0.95em;
-    }
-    .warning strong { color: #f57c00; }
-    .screenshot {
-      width: 100%;
-      border-radius: 8px;
-      border: 1px solid #e0e0e0;
-      margin: 16px 0;
-    }
-    footer {
-      text-align: center;
-      color: rgba(255,255,255,0.7);
-      padding: 30px 0;
-      font-size: 0.9em;
-    }
-    footer a { color: rgba(255,255,255,0.9); }
-    @media (max-width: 480px) {
-      .hero h1 { font-size: 1.8em; }
-      .hero p { font-size: 1em; }
-      .card { padding: 20px; }
-    }
+    :root{--bg:#000;--fg:#f5f5f7;--muted:#86868b;--accent:#2997ff;--card-bg:#1c1c1e;--card-border:#2c2c2e;--r:18px;--eo:cubic-bezier(.16,1,.3,1);--es:cubic-bezier(.34,1.56,.64,1)}
+    *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,Microsoft YaHei,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    .nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(255,255,255,.06);transition:background .4s var(--eo)}
+    .nav.scrolled{background:rgba(0,0,0,.9)}
+    .ni{max-width:1040px;margin:0 auto;padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between}
+    .nl{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:600;opacity:0;animation:fd .6s var(--eo) .2s forwards}
+    .nli{width:28px;height:28px;background:linear-gradient(135deg,#2997ff,#0066cc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+    .nA{display:flex;gap:32px;align-items:center}
+    .nA a{color:var(--fg);text-decoration:none;font-size:14px;opacity:.8;transition:opacity .25s}
+    .nA a:hover{opacity:1}
+    .nc{background:var(--accent);color:#fff;padding:6px 16px;border-radius:20px;font-size:14px;text-decoration:none;font-weight:500;transition:all .25s;box-shadow:0 2px 10px rgba(41,151,255,.25)}
+    .nc:hover{background:#0077ed;transform:translateY(-1px)}
+    .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;position:relative;overflow:hidden}
+    .hg{position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(41,151,255,.15),transparent 70%);pointer-events:none;animation:pulse 8s ease-in-out infinite}
+    .hb{display:inline-flex;align-items:center;gap:6px;background:rgba(41,151,255,.1);border:1px solid rgba(41,151,255,.2);padding:6px 14px;border-radius:20px;font-size:13px;color:var(--accent);margin-bottom:24px;opacity:0;animation:fu .6s var(--eo) .3s forwards}
+    .hero h1{font-size:clamp(40px,8vw,72px);font-weight:700;letter-spacing:-.03em;line-height:1.05;background:linear-gradient(180deg,#fff,rgba(255,255,255,.7));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;animation:fu .7s var(--eo) .4s forwards}
+    .hs{font-size:clamp(18px,3vw,22px);color:var(--muted);margin-top:16px;max-width:560px;opacity:0;animation:fu .7s var(--eo) .5s forwards}
+    .hc{display:flex;gap:16px;margin-top:36px;flex-wrap:wrap;justify-content:center;opacity:0;animation:fu .7s var(--eo) .6s forwards}
+    .bp{background:var(--accent);color:#fff;padding:14px 28px;border-radius:28px;font-size:16px;font-weight:500;text-decoration:none;transition:all .3s var(--es);box-shadow:0 4px 20px rgba(41,151,255,.3)}
+    .bp:hover{background:#0077ed;transform:translateY(-2px) scale(1.02);box-shadow:0 8px 30px rgba(41,151,255,.45)}
+    .bs{background:transparent;color:var(--accent);padding:14px 28px;border-radius:28px;font-size:16px;font-weight:500;text-decoration:none;border:1px solid rgba(41,151,255,.4);transition:all .3s var(--es)}
+    .bs:hover{background:rgba(41,151,255,.1);transform:translateY(-2px)}
+    .hv{margin-top:60px;width:100%;max-width:860px;opacity:0;animation:fu .9s var(--eo) .7s forwards}
+    .hi{width:100%;border-radius:var(--r);border:1px solid var(--card-border);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+    .s{max-width:1040px;margin:0 auto;padding:100px 24px}
+    .st{text-align:center;margin-bottom:60px}
+    .st h2{font-size:clamp(28px,5vw,44px);font-weight:700;letter-spacing:-.02em;margin-bottom:12px}
+    .st p{font-size:18px;color:var(--muted)}
+    .rv{opacity:0;transform:translateY(30px);transition:opacity .7s var(--eo),transform .7s var(--eo)}
+    .rv.vis{opacity:1;transform:translateY(0)}
+    .d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+    .fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+    .fc{background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--r);padding:32px;transition:all .4s var(--es)}
+    .fc:hover{transform:translateY(-6px);border-color:rgba(41,151,255,.3);box-shadow:0 16px 48px rgba(0,0,0,.4)}
+    .fi{width:48px;height:48px;border-radius:12px;background:rgba(41,151,255,.1);display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px;transition:transform .4s var(--es)}
+    .fc:hover .fi{transform:scale(1.1) rotate(-5deg)}
+    .fc h3{font-size:18px;font-weight:600;margin-bottom:8px}
+    .fc p{font-size:15px;color:var(--muted);line-height:1.6}
+    .steps{display:grid;gap:16px;max-width:680px;margin:0 auto}
+    .step{display:flex;gap:20px;align-items:center;background:var(--card-bg);border:1px solid var(--card-border);border-radius:var(--r);padding:24px 28px;transition:all .4s var(--es)}
+    .step:hover{transform:translateX(8px);border-color:rgba(41,151,255,.3)}
+    .sn{width:40px;height:40px;border-radius:50%;flex-shrink:0;background:linear-gradient(135deg,var(--accent),#0066cc);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff}
+    .ssteps h3{font-size:17px;font-weight:600;margin-bottom:4px}
+    .ssteps p{font-size:15px;color:var(--muted)}
+    .cta{text-align:center;padding:100px 24px;background:linear-gradient(180deg,transparent,rgba(41,151,255,.05))}
+    .cta h2{font-size:clamp(28px,5vw,44px);font-weight:700;margin-bottom:16px}
+    .cta p{font-size:18px;color:var(--muted);margin-bottom:32px}
+    .cn{font-size:14px;color:var(--muted);margin-top:20px}
+    .cn a{color:var(--accent);text-decoration:none}
+    .faq{max-width:680px;margin:0 auto}
+    .fq{border-bottom:1px solid var(--card-border);padding:20px 0}
+    .fqq{font-size:17px;font-weight:600}
+    .fqa{font-size:15px;color:var(--muted);line-height:1.7;margin-top:8px}
+    .fqa a{color:var(--accent);text-decoration:none}
+    footer{border-top:1px solid var(--card-border);padding:40px 24px;text-align:center;font-size:13px;color:var(--muted)}
+    footer a{color:var(--fg);text-decoration:none}
+    @keyframes fu{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fd{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1;transform:translateX(-50%) scale(1)}50%{opacity:.7;transform:translateX(-50%) scale(1.05)}}
+    .sp{position:fixed;top:0;left:0;height:2px;z-index:200;background:linear-gradient(90deg,var(--accent),#0066cc)}
+    @media(max-width:768px){.nA{display:none}.hero{padding-top:100px}.hc{flex-direction:column;align-items:center}.bp,.bs{width:100%;text-align:center}}
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="hero">
-      <h1>📝 880AutoPaper</h1>
-      <p>考研数学智能组卷系统 · 本地运行 · 永久免费</p>
-    </div>
-
-    <div class="card">
-      <h2>✨ 核心功能</h2>
-      <div class="features">
-        <div class="feature">
-          <div class="icon">🎯</div>
-          <h3>智能抽题</h3>
-          <p>按章节均匀分配，无放回随机抽取</p>
-        </div>
-        <div class="feature">
-          <div class="icon">🔄</div>
-          <h3>自动去重</h3>
-          <p>跨组卷记录已出题目，避免重复</p>
-        </div>
-        <div class="feature">
-          <div class="icon">📊</div>
-          <h3>难度筛选</h3>
-          <p>基础 / 综合 / 拓展，自由组合</p>
-        </div>
-        <div class="feature">
-          <div class="icon">📐</div>
-          <h3>公式渲染</h3>
-          <p>数学公式原生支持，清晰显示</p>
-        </div>
-        <div class="feature">
-          <div class="icon">💾</div>
-          <h3>方案管理</h3>
-          <p>保存多套出题方案，一键复用</p>
-        </div>
-        <div class="feature">
-          <div class="icon">🚀</div>
-          <h3>离线运行</h3>
-          <p>无需联网，数据全存本地</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>📸 界面预览</h2>
-      <img class="screenshot" src="screenshot1.png" alt="880AutoPaper 主界面" onerror="this.style.display='none'">
-      <img class="screenshot" src="screenshot2.png" alt="组卷结果" onerror="this.style.display='none'">
-    </div>
-
-    <a class="btn-download" href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper.exe" download>
-      ⬇️ 立即下载 Windows 版
-    </a>
-    <p class="file-info">版本 v1.0.0 · 绿色免安装 · 文件大小约 200MB</p>
-
-    <div class="card">
-      <h2>📖 使用说明</h2>
-      <ol class="steps">
-        <li><strong>下载</strong>：点击上方按钮下载 880AutoPaper</li>
-        <li><strong>运行</strong>：双击 exe 文件启动（首次可能提示安全警告，见下方说明）</li>
-        <li><strong>选题</strong>：选择考试科目（数一/数二）→ 选择篇章（高数/线代/概率）→ 选择难度、题型和题数</li>
-        <li><strong>组卷</strong>：点击「开始组卷」，系统自动按章节均匀抽题并去重</li>
-        <li><strong>管理</strong>：可保存组卷方案，下次一键复用</li>
-      </ol>
-    </div>
-
-    <div class="card">
-      <h2>⚠️ 常见问题</h2>
-      <div class="warning">
-        <strong>Windows 提示"不受支持的应用"？</strong><br>
-        本软件为个人开发，未购买代码签名证书。点击对话框中的「更多信息」→「仍要运行」即可正常使用。软件不上传任何数据，请放心。
-      </div>
-      <div class="warning">
-        <strong>杀毒软件误报？</strong><br>
-        部分杀毒软件（360、电脑管家等）可能误报。将软件加入白名单即可。
-      </div>
-      <p style="margin-top:16px;"><strong>支持系统：</strong>Windows 10 / 11（64位）</p>
-      <p><strong>Mac / Linux：</strong>暂不支持</p>
-    </div>
-
-    <div class="card">
-      <h2>💬 反馈与建议</h2>
-      <p>使用过程中遇到问题，或有功能建议，欢迎在 GitHub 提交反馈：</p>
-      <p style="margin-top:12px;"><a href="https://github.com/GradPrep-win/880-pinhao-juan/issues" target="_blank">github.com/GradPrep-win/880-pinhao-juan</a></p>
-    </div>
-
-    <footer>
-      <p>880AutoPaper · 考研路上，与你同行</p>
-      <p style="margin-top:8px;"><a href="https://github.com/GradPrep-win/880-pinhao-juan">GitHub 开源</a></p>
-    </footer>
-  </div>
+<div class="sp" id="sp"></div>
+<nav class="nav"><div class="ni"><div class="nl"><div class="nli">📝</div>880AutoPaper</div><div class="nA"><a href="#features">功能</a><a href="#steps">使用</a><a href="#faq">FAQ</a><a href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper-v1.0.2-windows.zip" class="nc">免费下载</a></div></div></nav>
+<section class="hero"><div class="hg"></div><div class="hb">🎉 v1.0.2</div><h1>考研数学<br>智能组卷</h1><p class="hs">数一数二 · 按章均匀选题 · 自动去重 · 公式原生渲染</p><div class="hc"><a href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper-v1.0.2-windows.zip" class="bp">⬇️ 免费下载</a><a href="#features" class="bs">了解更多</a></div><div class="hv"><img class="hi" src="screenshot1.png" alt="880AutoPaper" onerror="this.parentNode.style.display='none'"></div></section>
+<section class="s" id="features"><div class="st rv"><h2>核心功能</h2><p>为考研数学量身打造</p></div><div class="fx"><div class="fc rv d1"><div class="fi">🎯</div><h3>按章均匀抽题</h3><p>每道题按章节均匀分配，避免扎堆某一章。</p></div><div class="fc rv d2"><div class="fi">🔄</div><h3>智能去重</h3><p>自动记录已出题目，跨组卷去重。</p></div><div class="fc rv d3"><div class="fi">📊</div><h3>难度组合</h3><p>基础 / 综合 / 拓展，自由配比。</p></div><div class="fc rv d1"><div class="fi">📐</div><h3>公式渲染</h3><p>KaTeX 引擎，印刷级公式显示。</p></div><div class="fc rv d2"><div class="fi">💾</div><h3>方案复用</h3><p>保存多套方案，一键载入。</p></div><div class="fc rv d3"><div class="fi">🚀</div><h3>离线免费</h3><p>本地运行，无需联网，永久免费。</p></div></div></section>
+<section class="s" id="steps"><div class="st rv"><h2>三步组卷</h2></div><div class="steps"><div class="step rv d1"><div class="sn">1</div><div class="ssteps"><h3>配置参数</h3><p>选择考试类型、篇章、难度、题型数量</p></div></div><div class="step rv d2"><div class="sn">2</div><div class="ssteps"><h3>创建方案</h3><p>保存配置，下次一键复用</p></div></div><div class="step rv d3"><div class="sn">3</div><div class="ssteps"><h3>一键组卷</h3><p>自动抽题、去重、生成试卷</p></div></div></div></section>
+<section class="cta rv"><h2>开始智能组卷</h2><p>免费下载，无需注册</p><a href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper-v1.0.2-windows.zip" class="bp">⬇️ 下载 Windows 版</a><p class="cn">Win 10/11 · 130MB · <a href="https://github.com/GradPrep-win/880-pinhao-juan">GitHub</a></p></section>
+<section class="s" id="faq"><div class="st rv"><h2>常见问题</h2></div><div class="faq"><div class="fq rv d1"><div class="fqq">Windows 提示不安全？</div><div class="fqa">点「更多信息」→「仍要运行」即可。</div></div><div class="fq rv d2"><div class="fqq">杀毒软件误报？</div><div class="fqa">加入白名单即可，软件不上传任何数据。</div></div><div class="fq rv d3"><div class="fqq">支持 Mac 吗？</div><div class="fqa">目前仅支持 Windows 10/11。</div></div></div></section>
+<footer><p>880AutoPaper · <a href="https://github.com/GradPrep-win/880-pinhao-juan">GitHub</a></p></footer>
+<script>
+const ob=new IntersectionObserver(e=>{e.forEach(e=>{e.isIntersecting&&e.target.classList.add('vis')})},{threshold:.1});
+document.querySelectorAll('.rv').forEach(e=>ob.observe(e));
+const nav=document.querySelector('.nav');
+window.addEventListener('scroll',()=>{
+  const s=window.scrollY,d=document.documentElement.scrollHeight-window.innerHeight;
+  document.getElementById('sp').style.width=(d>0?s/d*100:0)+'%';
+  if(s>50)nav.classList.add('scrolled');else nav.classList.remove('scrolled');
+},{passive:true});
+</script>
 </body>
 </html>
