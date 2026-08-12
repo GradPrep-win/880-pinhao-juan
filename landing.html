@@ -93,9 +93,9 @@
 
     /* ── Hero ── */
     .hero {
-      min-height: 100vh; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center;
-      padding: 140px 32px 100px; position: relative; overflow: hidden;
+      min-height: 760px; display: grid; grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+      align-items: center; gap: 54px; text-align: left;
+      max-width: 1200px; margin: 0 auto; padding: 118px 32px 76px; position: relative; overflow: hidden;
     }
 
     .hero-bg {
@@ -110,12 +110,12 @@
       background: rgba(41,151,255,0.08); border: 1px solid rgba(41,151,255,0.18);
       padding: 6px 16px; border-radius: 999px;
       font-size: 12px; font-weight: 600; color: var(--accent);
-      margin-bottom: 28px;
+      margin-bottom: 22px;
       opacity: 0; animation: fadeUp 0.7s var(--ease) 0.4s forwards;
     }
 
     .hero h1 {
-      font-size: clamp(48px, 9vw, 88px);
+      font-size: clamp(46px, 5.8vw, 76px);
       font-weight: 800; letter-spacing: -0.04em; line-height: 1.02;
       background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.6) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -124,14 +124,14 @@
     }
 
     .hero-sub {
-      font-size: clamp(17px, 2.5vw, 21px);
-      color: var(--muted); margin-top: 20px; max-width: 520px;
+      font-size: 18px;
+      color: var(--muted); margin-top: 20px; max-width: 430px;
       letter-spacing: 0.01em;
       opacity: 0; animation: fadeUp 0.8s var(--ease) 0.6s forwards;
     }
 
     .hero-ctas {
-      display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; justify-content: center;
+      display: flex; gap: 14px; margin-top: 34px; flex-wrap: wrap;
       opacity: 0; animation: fadeUp 0.8s var(--ease) 0.7s forwards;
     }
 
@@ -160,7 +160,7 @@
     }
 
     .hero-visual {
-      margin-top: 72px; width: 100%; max-width: 1040px;
+      width: 100%; max-width: none;
       opacity: 0; animation: fadeUp 1s var(--ease) 0.85s forwards;
     }
 
@@ -176,7 +176,7 @@
     }
 
     /* ── Section Base ── */
-    .section { max-width: 1080px; margin: 0 auto; padding: 120px 32px; }
+    .section { max-width: 1080px; margin: 0 auto; padding: 96px 32px; }
 
     .section-header { text-align: center; margin-bottom: 72px; }
 
@@ -288,7 +288,7 @@
     }
 
     .screenshot-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+      display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 24px; align-items: start;
     }
 
     .screenshot {
@@ -297,6 +297,8 @@
       box-shadow: 0 12px 40px rgba(0,0,0,0.35);
       transition: all 0.5s var(--ease);
     }
+    .screenshot-row .screenshot:first-child { aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
+    .screenshot-row .screenshot:last-child { aspect-ratio: 16 / 10; object-fit: cover; object-position: top right; }
     .screenshot:hover {
       transform: scale(1.02) translateY(-4px);
       box-shadow: 0 24px 60px rgba(0,0,0,0.5);
@@ -365,9 +367,11 @@
       .nav-links { display: none; }
       .features { grid-template-columns: 1fr; }
       .screenshot-row { grid-template-columns: 1fr; }
-      .hero { padding-top: 120px; }
+      .hero { display: flex; flex-direction: column; align-items: flex-start; min-height: auto; gap: 28px; padding-top: 120px; text-align: left; }
+      .hero h1 { font-size: clamp(48px, 14vw, 72px); }
       .hero-ctas { flex-direction: column; align-items: center; }
       .btn-primary, .btn-secondary { width: 100%; max-width: 300px; text-align: center; }
+      .hero-visual { margin-top: 8px; }
       .section { padding: 80px 24px; }
     }
   </style>
@@ -402,7 +406,7 @@
     <a href="#preview" class="btn-secondary">查看预览</a>
   </div>
   <div class="hero-visual">
-    <img class="hero-img" src="product-overview.png" alt="880AutoPaper 产品介绍：智能组卷功能与主界面预览" onerror="this.style.display='none'">
+    <img class="hero-img" src="product-overview-v2.png" alt="880AutoPaper 组卷配置与试卷预览" onerror="this.style.display='none'">
   </div>
 </section>
 
@@ -454,8 +458,8 @@
   </div>
   <div class="screenshots reveal">
     <div class="screenshot-row">
-      <img class="screenshot" src="screenshot1.png" alt="配置界面" onerror="this.style.display='none'">
-      <img class="screenshot" src="screenshot2.png" alt="组卷结果" onerror="this.style.display='none'">
+      <img class="screenshot" src="screenshot-latest-paper.png" alt="组卷结果与试卷预览" onerror="this.style.display='none'">
+      <img class="screenshot" src="screenshot-latest-builder.png" alt="组卷参数配置界面" onerror="this.style.display='none'">
     </div>
   </div>
 </section>
