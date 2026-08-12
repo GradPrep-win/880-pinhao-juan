@@ -287,7 +287,7 @@
     }
 
     .screenshot-row {
-      display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 24px; align-items: start;
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch;
     }
 
     .screenshot {
@@ -296,8 +296,7 @@
       box-shadow: 0 12px 40px rgba(0,0,0,0.35);
       transition: all 0.5s var(--ease);
     }
-    .screenshot-row .screenshot:first-child { aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; }
-    .screenshot-row .screenshot:last-child { aspect-ratio: 16 / 10; object-fit: cover; object-position: top right; }
+    .screenshot-row .screenshot { aspect-ratio: 16 / 10; height: 100%; object-fit: cover; object-position: top center; }
     .screenshot:hover {
       transform: scale(1.02) translateY(-4px);
       box-shadow: 0 24px 60px rgba(0,0,0,0.5);
