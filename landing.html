@@ -3,20 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>880AutoPaper - 考研数学智能组卷系统</title>
+  <meta name="description" content="880AutoPaper - 考研数学智能组卷系统，数一数二按章均匀选题，自动离线去重，公式原生渲染">
+  <title>880AutoPaper — 考研数学智能组卷</title>
   <style>
     :root {
       --bg: #000;
       --fg: #f5f5f7;
       --muted: #86868b;
       --accent: #2997ff;
-      --accent-hover: #0077ed;
-      --card-bg: #1c1c1e;
-      --card-border: #2c2c2e;
-      --radius: 18px;
+      --accent-glow: rgba(41,151,255,0.15);
+      --card-bg: rgba(28,28,30,0.6);
+      --card-border: rgba(255,255,255,0.08);
+      --radius: 20px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     html { scroll-behavior: smooth; }
 
@@ -24,321 +27,546 @@
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei', sans-serif;
       background: var(--bg);
       color: var(--fg);
-      line-height: 1.5;
+      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
       overflow-x: hidden;
     }
 
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(0,0,0,0.8);
-      backdrop-filter: saturate(180%) blur(20px);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      border-bottom: 1px solid rgba(255,255,255,0.1);
+    /* ── Progress Bar ── */
+    .progress-bar {
+      position: fixed; top: 0; left: 0; height: 2px; z-index: 9999;
+      background: linear-gradient(90deg, var(--accent), #0066cc);
+      transition: width 0.15s linear;
+      box-shadow: 0 0 10px var(--accent-glow);
     }
-    .nav-inner {
-      max-width: 1040px; margin: 0 auto; padding: 0 24px;
-      height: 52px; display: flex; align-items: center; justify-content: space-between;
-    }
-    .nav-logo {
-      font-size: 19px; font-weight: 600; letter-spacing: -0.01em;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .nav-logo-icon {
-      width: 28px; height: 28px; background: linear-gradient(135deg, #2997ff, #0066cc);
-      border-radius: 8px; display: flex; align-items: center; justify-content: center;
-      font-size: 16px; color: #fff;
-    }
-    .nav-links { display: flex; gap: 32px; align-items: center; }
-    .nav-links a {
-      color: var(--fg); text-decoration: none; font-size: 14px; opacity: 0.8;
-      transition: opacity 0.2s;
-    }
-    .nav-links a:hover { opacity: 1; }
-    .nav-cta {
-      background: var(--accent); color: #fff; padding: 6px 16px; border-radius: 20px;
-      font-size: 14px; text-decoration: none; font-weight: 500;
-      transition: background 0.2s;
-    }
-    .nav-cta:hover { background: var(--accent-hover); }
 
+    /* ── Navigation ── */
+    .nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      height: 56px;
+      background: rgba(0,0,0,0.72);
+      backdrop-filter: saturate(180%) blur(24px);
+      -webkit-backdrop-filter: saturate(180%) blur(24px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.4s var(--ease);
+    }
+    .nav.scrolled { background: rgba(0,0,0,0.92); }
+
+    .nav-inner {
+      max-width: 1080px; margin: 0 auto; padding: 0 32px; height: 100%;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 18px; font-weight: 600; letter-spacing: -0.02em;
+      opacity: 0; animation: fadeDown 0.7s var(--ease) 0.3s forwards;
+    }
+
+    .nav-logo-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: linear-gradient(135deg, #2997ff 0%, #0064cc 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; color: #fff;
+      box-shadow: 0 2px 12px rgba(41,151,255,0.35);
+    }
+
+    .nav-links { display: flex; gap: 36px; align-items: center; }
+
+    .nav-links a {
+      color: rgba(245,245,247,0.7); text-decoration: none; font-size: 13px; font-weight: 500;
+      letter-spacing: 0.01em; transition: color 0.25s var(--ease);
+    }
+    .nav-links a:hover { color: #fff; }
+
+    .nav-cta {
+      background: var(--accent); color: #fff; padding: 7px 18px; border-radius: 999px;
+      font-size: 13px; text-decoration: none; font-weight: 600;
+      transition: all 0.3s var(--ease-spring);
+      box-shadow: 0 2px 12px rgba(41,151,255,0.3);
+    }
+    .nav-cta:hover {
+      background: #0077ed; transform: scale(1.04);
+      box-shadow: 0 4px 20px rgba(41,151,255,0.45);
+    }
+
+    /* ── Hero ── */
     .hero {
       min-height: 100vh; display: flex; flex-direction: column;
       align-items: center; justify-content: center; text-align: center;
-      padding: 120px 24px 80px; position: relative; overflow: hidden;
+      padding: 140px 32px 100px; position: relative; overflow: hidden;
     }
-    .hero-gradient {
-      position: absolute; top: -20%; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 800px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(41,151,255,0.15) 0%, transparent 70%);
-      pointer-events: none;
+
+    .hero-bg {
+      position: absolute; top: -30%; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 900px; border-radius: 50%;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 65%);
+      pointer-events: none; animation: heroPulse 10s ease-in-out infinite;
     }
+
     .hero-badge {
       display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(41,151,255,0.1); border: 1px solid rgba(41,151,255,0.2);
-      padding: 6px 14px; border-radius: 20px; font-size: 13px; color: var(--accent);
-      margin-bottom: 24px; animation: fadeIn 0.6s ease-out;
+      background: rgba(41,151,255,0.08); border: 1px solid rgba(41,151,255,0.18);
+      padding: 6px 16px; border-radius: 999px;
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      margin-bottom: 28px;
+      opacity: 0; animation: fadeUp 0.7s var(--ease) 0.4s forwards;
     }
+
     .hero h1 {
-      font-size: clamp(40px, 8vw, 80px); font-weight: 700;
-      letter-spacing: -0.03em; line-height: 1.05;
-      background: linear-gradient(180deg, #fff 0%, rgba(255,255,255,0.7) 100%);
+      font-size: clamp(48px, 9vw, 88px);
+      font-weight: 800; letter-spacing: -0.04em; line-height: 1.02;
+      background: linear-gradient(180deg, #fff 30%, rgba(255,255,255,0.6) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; animation: fadeIn 0.6s ease-out 0.1s both;
+      background-clip: text;
+      opacity: 0; animation: fadeUp 0.8s var(--ease) 0.5s forwards;
     }
+
     .hero-sub {
-      font-size: clamp(18px, 3vw, 24px); color: var(--muted); margin-top: 16px;
-      max-width: 600px; animation: fadeIn 0.6s ease-out 0.2s both;
+      font-size: clamp(17px, 2.5vw, 21px);
+      color: var(--muted); margin-top: 20px; max-width: 520px;
+      letter-spacing: 0.01em;
+      opacity: 0; animation: fadeUp 0.8s var(--ease) 0.6s forwards;
     }
+
     .hero-ctas {
-      display: flex; gap: 16px; margin-top: 36px; flex-wrap: wrap; justify-content: center;
-      animation: fadeIn 0.6s ease-out 0.3s both;
+      display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; justify-content: center;
+      opacity: 0; animation: fadeUp 0.8s var(--ease) 0.7s forwards;
     }
+
     .btn-primary {
-      background: var(--accent); color: #fff; padding: 14px 28px; border-radius: 28px;
-      font-size: 16px; font-weight: 500; text-decoration: none;
-      transition: all 0.2s; box-shadow: 0 4px 20px rgba(41,151,255,0.3);
+      background: var(--accent); color: #fff;
+      padding: 15px 32px; border-radius: 999px;
+      font-size: 16px; font-weight: 600; text-decoration: none;
+      transition: all 0.3s var(--ease-spring);
+      box-shadow: 0 4px 24px rgba(41,151,255,0.35);
     }
-    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-primary:hover {
+      background: #0077ed; transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 8px 36px rgba(41,151,255,0.5);
+    }
+
     .btn-secondary {
-      background: transparent; color: var(--accent); padding: 14px 28px; border-radius: 28px;
-      font-size: 16px; font-weight: 500; text-decoration: none; border: 1px solid rgba(41,151,255,0.4);
-      transition: all 0.2s;
+      background: rgba(255,255,255,0.04); color: var(--fg);
+      padding: 15px 32px; border-radius: 999px;
+      font-size: 16px; font-weight: 600; text-decoration: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.3s var(--ease-spring);
     }
-    .btn-secondary:hover { background: rgba(41,151,255,0.1); }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08); transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.2);
+    }
+
     .hero-visual {
-      margin-top: 60px; width: 100%; max-width: 900px;
-      animation: fadeIn 0.8s ease-out 0.4s both;
+      margin-top: 72px; width: 100%; max-width: 1040px;
+      opacity: 0; animation: fadeUp 1s var(--ease) 0.85s forwards;
     }
+
     .hero-img {
-      width: 100%; border-radius: var(--radius); border: 1px solid var(--card-border);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain; border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03);
+      transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease);
+    }
+    .hero-img:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7);
     }
 
-    .section { max-width: 1040px; margin: 0 auto; padding: 100px 24px; }
-    .section-title { text-align: center; margin-bottom: 60px; }
-    .section-title h2 {
-      font-size: clamp(32px, 5vw, 48px); font-weight: 700; letter-spacing: -0.02em;
-      margin-bottom: 12px;
-    }
-    .section-title p { font-size: 19px; color: var(--muted); }
+    /* ── Section Base ── */
+    .section { max-width: 1080px; margin: 0 auto; padding: 120px 32px; }
 
-    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .feature-card {
-      background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: var(--radius); padding: 32px; transition: all 0.3s ease;
-    }
-    .feature-card:hover {
-      transform: translateY(-4px); border-color: rgba(41,151,255,0.3);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
-    }
-    .feature-icon {
-      width: 48px; height: 48px; border-radius: 12px;
-      background: linear-gradient(135deg, rgba(41,151,255,0.2), rgba(41,151,255,0.05));
-      display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px;
-    }
-    .feature-card h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-    .feature-card p { font-size: 15px; color: var(--muted); line-height: 1.6; }
+    .section-header { text-align: center; margin-bottom: 72px; }
 
-    .screenshots { display: grid; gap: 24px; }
-    .screenshot-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .screenshot-img {
-      width: 100%; border-radius: var(--radius); border: 1px solid var(--card-border);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3); transition: transform 0.3s;
-    }
-    .screenshot-img:hover { transform: scale(1.02); }
-
-    .steps { display: grid; gap: 20px; max-width: 720px; margin: 0 auto; }
-    .step {
-      display: flex; gap: 20px; align-items: center;
-      background: var(--card-bg); border: 1px solid var(--card-border);
-      border-radius: var(--radius); padding: 24px 28px;
-    }
-    .step-no {
-      width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(135deg, var(--accent), #0066cc);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 16px;
-    }
-    .step-text h3 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
-    .step-text p { font-size: 15px; color: var(--muted); }
-
-    .cta-section {
-      text-align: center; padding: 120px 24px;
-      background: linear-gradient(180deg, transparent 0%, rgba(41,151,255,0.05) 100%);
-    }
-    .cta-section h2 {
-      font-size: clamp(32px, 5vw, 48px); font-weight: 700; letter-spacing: -0.02em;
+    .section-tag {
+      display: inline-block;
+      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent);
       margin-bottom: 16px;
     }
-    .cta-section p { font-size: 19px; color: var(--muted); margin-bottom: 36px; }
-    .cta-note { font-size: 14px; color: var(--muted); margin-top: 20px; }
-    .cta-note a { color: var(--accent); text-decoration: none; }
 
-    .faq-list { max-width: 720px; margin: 0 auto; }
-    .faq-item { border-bottom: 1px solid var(--card-border); padding: 24px 0; }
-    .faq-q { font-size: 17px; font-weight: 600; }
-    .faq-a { font-size: 15px; color: var(--muted); line-height: 1.7; margin-top: 8px; }
-
-    footer {
-      border-top: 1px solid var(--card-border); padding: 40px 24px;
-      text-align: center; font-size: 13px; color: var(--muted);
+    .section-title {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 700; letter-spacing: -0.03em; line-height: 1.1;
+      margin-bottom: 16px;
     }
-    footer a { color: var(--fg); text-decoration: none; }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
+    .section-desc {
+      font-size: 18px; color: var(--muted); max-width: 480px; margin: 0 auto;
+    }
+
+    /* ── Reveal ── */
+    .reveal {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+    }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+    .reveal-d1 { transition-delay: 0.08s; }
+    .reveal-d2 { transition-delay: 0.16s; }
+    .reveal-d3 { transition-delay: 0.24s; }
+    .reveal-d4 { transition-delay: 0.32s; }
+    .reveal-d5 { transition-delay: 0.40s; }
+    .reveal-d6 { transition-delay: 0.48s; }
+
+    /* ── Features Grid ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 36px 28px;
+      transition: all 0.4s var(--ease-spring);
+      position: relative; overflow: hidden;
+    }
+
+    .feature-card::after {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0; transition: opacity 0.4s var(--ease);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(41,151,255,0.25);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .feature-card:hover::after { opacity: 0.6; }
+
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(41,151,255,0.15), rgba(41,151,255,0.04));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; margin-bottom: 20px;
+      transition: transform 0.4s var(--ease-spring);
+    }
+    .feature-card:hover .feature-icon { transform: scale(1.08) rotate(-4deg); }
+
+    .feature-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
+    .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    /* ── Steps ── */
+    .steps {
+      display: grid; gap: 16px; max-width: 640px; margin: 0 auto;
+    }
+
+    .step {
+      display: flex; gap: 24px; align-items: center;
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: var(--radius); padding: 28px 32px;
+      transition: all 0.4s var(--ease-spring);
+    }
+
+    .step:hover {
+      transform: translateX(8px);
+      border-color: rgba(41,151,255,0.2);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+    }
+
+    .step-num {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent) 0%, #0060c0 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 17px; color: #fff;
+      box-shadow: 0 4px 16px rgba(41,151,255,0.35);
+      transition: transform 0.4s var(--ease-spring);
+    }
+    .step:hover .step-num { transform: scale(1.12); }
+
+    .step-content h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .step-content p { font-size: 14px; color: var(--muted); }
+
+    /* ── Screenshots ── */
+    .screenshots {
+      display: grid; gap: 24px;
+    }
+
+    .screenshot-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+    }
+
+    .screenshot {
+      width: 100%; border-radius: var(--radius);
+      border: 1px solid var(--card-border);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+      transition: all 0.5s var(--ease);
+    }
+    .screenshot:hover {
+      transform: scale(1.02) translateY(-4px);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center; padding: 140px 32px;
+      background: linear-gradient(180deg, transparent 0%, rgba(41,151,255,0.04) 100%);
+    }
+
+    .cta-section h2 {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 700; letter-spacing: -0.03em; margin-bottom: 16px;
+    }
+
+    .cta-section p {
+      font-size: 18px; color: var(--muted); margin-bottom: 36px;
+    }
+
+    .cta-note { font-size: 13px; color: var(--muted); margin-top: 24px; }
+    .cta-note a { color: var(--accent); text-decoration: none; transition: color 0.2s; }
+    .cta-note a:hover { color: #fff; }
+
+    /* ── FAQ ── */
+    .faq-list { max-width: 680px; margin: 0 auto; }
+
+    .faq-item {
+      border-bottom: 1px solid var(--card-border);
+      padding: 24px 0;
+    }
+
+    .faq-q { font-size: 16px; font-weight: 600; }
+    .faq-a { font-size: 14px; color: var(--muted); line-height: 1.7; margin-top: 8px; }
+    .faq-a a { color: var(--accent); text-decoration: none; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 48px 32px; text-align: center;
+      font-size: 12px; color: var(--muted);
+    }
+    footer a { color: rgba(245,245,247,0.6); text-decoration: none; transition: color 0.2s; }
+    footer a:hover { color: #fff; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes heroPulse {
+      0%, 100% { opacity: 0.8; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .features { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 768px) {
       .nav-links { display: none; }
+      .features { grid-template-columns: 1fr; }
       .screenshot-row { grid-template-columns: 1fr; }
-      .hero { padding-top: 100px; }
+      .hero { padding-top: 120px; }
       .hero-ctas { flex-direction: column; align-items: center; }
-      .btn-primary, .btn-secondary { width: 100%; text-align: center; }
+      .btn-primary, .btn-secondary { width: 100%; max-width: 300px; text-align: center; }
+      .section { padding: 80px 24px; }
     }
   </style>
 </head>
 <body>
 
-  <nav>
-    <div class="nav-inner">
-      <div class="nav-logo">
-        <div class="nav-logo-icon">📝</div>
-        880AutoPaper
-      </div>
-      <div class="nav-links">
-        <a href="#features">功能</a>
-        <a href="#screenshots">预览</a>
-        <a href="#how">使用</a>
-        <a href="#faq">常见问题</a>
-        <a href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper-v1.0.1-windows.zip" class="nav-cta">免费下载</a>
-      </div>
-    </div>
-  </nav>
+<div class="progress-bar" id="progressBar"></div>
 
-  <section class="hero">
-    <div class="hero-gradient"></div>
-    <div class="hero-badge">🎉 v1.0.1 全新发布</div>
-    <h1>考研数学<br>智能组卷</h1>
-    <p class="hero-sub">数一数二 · 按章均匀选题 · 自动离线去重 · 公式原生渲染</p>
-    <div class="hero-ctas">
-      <a href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper-v1.0.1-windows.zip" class="btn-primary">⬇️ 免费下载</a>
-      <a href="#features" class="btn-secondary">了解更多 →</a>
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <div class="nav-logo-icon">📝</div>
+      <span>880AutoPaper</span>
     </div>
-    <div class="hero-visual">
-      <img class="hero-img" src="screenshot1.png" alt="880AutoPaper 主界面" onerror="this.style.display='none'">
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#preview">预览</a>
+      <a href="#how">教程</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/GradPrep-win/880-auto-paper/releases/latest/download/880AutoPaper-v1.0.3-windows.zip" class="nav-cta">免费下载</a>
     </div>
-  </section>
+  </div>
+</nav>
 
-  <section class="section" id="features">
-    <div class="section-title">
-      <h2>为什么选择 880AutoPaper</h2>
-      <p>为考研数学量身打造的智能组卷工具</p>
-    </div>
-    <div class="features">
-      <div class="feature-card">
-        <div class="feature-icon">🎯</div>
-        <h3>按章均匀抽题</h3>
-        <p>每道题按章节均匀分配，避免扎堆某一章，让试卷覆盖更全面。</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔄</div>
-        <h3>智能去重</h3>
-        <p>自动记录已出过的题目，跨组卷去重，确保每次都是新题。</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>难度自由组合</h3>
-        <p>基础、综合、拓展三档难度，点击单选或 Ctrl+多选，灵活配比。</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📐</div>
-        <h3>公式原生渲染</h3>
-        <p>KaTeX 引擎驱动，数学公式、符号清晰显示，打印出版级质量。</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">💾</div>
-        <h3>方案一键复用</h3>
-        <p>保存多套出题方案，下次组卷直接载入，无需重复配置。</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🚀</div>
-        <h3>离线永久免费</h3>
-        <p>本地运行无需联网，数据全存本地，安全隐私有保障。</p>
-      </div>
-    </div>
-  </section>
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-badge">🎉 v1.0.3 已发布</div>
+  <h1>考研数学<br>智能组卷</h1>
+  <p class="hero-sub">数一数二 · 按章均匀选题 · 自动离线去重 · KaTeX 公式原生渲染</p>
+  <div class="hero-ctas">
+    <a href="https://github.com/GradPrep-win/880-auto-paper/releases/latest/download/880AutoPaper-v1.0.3-windows.zip" class="btn-primary">⬇️ 免费下载</a>
+    <a href="#preview" class="btn-secondary">查看预览</a>
+  </div>
+  <div class="hero-visual">
+    <img class="hero-img" src="picture/9523b7f9163943cd5a31562826a26da0.jpg" alt="880AutoPaper 产品介绍：智能组卷功能与主界面预览" onerror="this.style.display='none'">
+  </div>
+</section>
 
-  <section class="section" id="screenshots">
-    <div class="section-title">
-      <h2>界面预览</h2>
-      <p>简洁直观的操作体验</p>
+<section class="section" id="features">
+  <div class="section-header reveal">
+    <div class="section-tag">核心优势</div>
+    <h2 class="section-title">为什么选择我们</h2>
+    <p class="section-desc">专为考研数学设计的智能组卷工具，让出题更高效、更科学</p>
+  </div>
+  <div class="features">
+    <div class="feature-card reveal reveal-d1">
+      <div class="feature-icon">🎯</div>
+      <h3>按章均匀抽题</h3>
+      <p>每道题按章节均匀分配，避免扎堆某一章，确保试卷覆盖全面、分布合理。</p>
     </div>
-    <div class="screenshots">
-      <div class="screenshot-row">
-        <img class="screenshot-img" src="screenshot1.png" alt="配置界面" onerror="this.style.display='none'">
-        <img class="screenshot-img" src="screenshot2.png" alt="组卷结果" onerror="this.style.display='none'">
-      </div>
+    <div class="feature-card reveal reveal-d2">
+      <div class="feature-icon">🔄</div>
+      <h3>智能去重</h3>
+      <p>自动记录已出题目，跨组卷去重，保证每次生成的试卷都是全新题目。</p>
     </div>
-  </section>
+    <div class="feature-card reveal reveal-d3">
+      <div class="feature-icon">📊</div>
+      <h3>难度自由组合</h3>
+      <p>基础、综合、拓展三档难度，点击单选或 Ctrl+多选，灵活配比。</p>
+    </div>
+    <div class="feature-card reveal reveal-d4">
+      <div class="feature-icon">📐</div>
+      <h3>公式原生渲染</h3>
+      <p>KaTeX 引擎驱动，数学公式、符号清晰显示，打印出版级质量。</p>
+    </div>
+    <div class="feature-card reveal reveal-d5">
+      <div class="feature-icon">💾</div>
+      <h3>方案一键复用</h3>
+      <p>保存多套出题方案，下次组卷直接载入，无需重复配置。</p>
+    </div>
+    <div class="feature-card reveal reveal-d6">
+      <div class="feature-icon">🚀</div>
+      <h3>离线永久免费</h3>
+      <p>本地运行无需联网，数据全存本地，安全隐私有保障。</p>
+    </div>
+    <div class="feature-card reveal reveal-d1">
+      <div class="feature-icon">🗂️</div>
+      <h3>组卷历史折叠</h3>
+      <p>历史记录默认只显示最近内容，支持整体收起和展开更多，页面更清爽。</p>
+    </div>
+    <div class="feature-card reveal reveal-d2">
+      <div class="feature-icon">↔️</div>
+      <h3>面板宽度可调</h3>
+      <p>左侧组卷面板支持拖拽调整宽度，也可以用键盘微调，适配不同屏幕。</p>
+    </div>
+  </div>
+</section>
 
-  <section class="section" id="how">
-    <div class="section-title">
-      <h2>三步开始组卷</h2>
-      <p>简单几步，生成一份高质量试卷</p>
+<section class="section" id="preview">
+  <div class="section-header reveal">
+    <div class="section-tag">界面预览</div>
+    <h2 class="section-title">简洁直观</h2>
+    <p class="section-desc">左侧配置，右侧预览，所见即所得</p>
+  </div>
+  <div class="screenshots reveal">
+    <div class="screenshot-row">
+      <img class="screenshot" src="screenshot1.png" alt="配置界面" onerror="this.style.display='none'">
+      <img class="screenshot" src="screenshot2.png" alt="组卷结果" onerror="this.style.display='none'">
     </div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-no">1</div>
-        <div class="step-text"><h3>配置参数</h3><p>选择考试类型、篇章、难度分类和各题型数量。</p></div>
-      </div>
-      <div class="step">
-        <div class="step-no">2</div>
-        <div class="step-text"><h3>创建方案</h3><p>保存当前配置为方案，方便下次一键复用。</p></div>
-      </div>
-      <div class="step">
-        <div class="step-no">3</div>
-        <div class="step-text"><h3>一键组卷</h3><p>点击组卷，系统自动抽题、去重、生成试卷。</p></div>
-      </div>
-    </div>
-  </section>
+  </div>
+</section>
 
-  <section class="cta-section">
-    <h2>开始你的智能组卷之旅</h2>
-    <p>免费下载，无需注册，永久使用</p>
-    <a href="https://github.com/GradPrep-win/880-pinhao-juan/releases/latest/download/880AutoPaper-v1.0.1-windows.zip" class="btn-primary">⬇️ 免费下载 Windows 版</a>
-    <p class="cta-note">支持 Windows 10 / 11 · 压缩包约 130MB · <a href="https://github.com/GradPrep-win/880-pinhao-juan">GitHub 开源</a></p>
-  </section>
-
-  <section class="section" id="faq">
-    <div class="section-title">
-      <h2>常见问题</h2>
+<section class="section" id="how">
+  <div class="section-header reveal">
+    <div class="section-tag">使用教程</div>
+    <h2 class="section-title">三步开始组卷</h2>
+    <p class="section-desc">简单几步，生成一份高质量试卷</p>
+  </div>
+  <div class="steps">
+    <div class="step reveal reveal-d1">
+      <div class="step-num">1</div>
+      <div class="step-content"><h3>配置参数</h3><p>选择考试类型、篇章、难度分类和各题型数量</p></div>
     </div>
-    <div class="faq-list">
-      <div class="faq-item">
-        <div class="faq-q">Windows 提示"不受支持的应用"？</div>
-        <div class="faq-a">本软件为个人开发，未购买代码签名证书。点击对话框中的「更多信息」→「仍要运行」即可正常使用。</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q">杀毒软件误报怎么办？</div>
-        <div class="faq-a">部分杀毒软件（360、电脑管家等）可能误报。将软件加入白名单即可，软件不上传任何数据。</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q">支持 Mac 或 Linux 吗？</div>
-        <div class="faq-a">目前仅支持 Windows 10 / 11（64位）。Mac 和 Linux 版本正在开发中。</div>
-      </div>
-      <div class="faq-item">
-        <div class="faq-q">如何反馈问题或建议？</div>
-        <div class="faq-a">欢迎在 GitHub 提交 Issue：<a href="https://github.com/GradPrep-win/880-pinhao-juan/issues" style="color:var(--accent)">github.com/GradPrep-win/880-pinhao-juan/issues</a></div>
-      </div>
+    <div class="step reveal reveal-d2">
+      <div class="step-num">2</div>
+      <div class="step-content"><h3>创建方案</h3><p>保存当前配置为方案，方便下次一键复用</p></div>
     </div>
-  </section>
+    <div class="step reveal reveal-d3">
+      <div class="step-num">3</div>
+      <div class="step-content"><h3>一键组卷</h3><p>点击组卷，系统自动抽题、去重、生成试卷</p></div>
+    </div>
+  </div>
+</section>
 
-  <footer>
-    <p>880AutoPaper · 考研路上，与你同行 · <a href="https://github.com/GradPrep-win/880-pinhao-juan">GitHub</a></p>
-  </footer>
+<section class="cta-section" id="download">
+  <h2 class="reveal">开始你的智能组卷之旅</h2>
+  <p class="reveal reveal-d1">免费下载 · 无需注册 · 永久使用</p>
+  <a href="https://github.com/GradPrep-win/880-auto-paper/releases/latest/download/880AutoPaper-v1.0.3-windows.zip" class="btn-primary reveal reveal-d2">⬇️ 免费下载 Windows 版</a>
+  <p class="cta-note reveal reveal-d3">支持 Windows 10 / 11 · 压缩包约 130MB · <a href="https://github.com/GradPrep-win/880-auto-paper">GitHub 开源</a></p>
+</section>
+
+<section class="section" id="faq">
+  <div class="section-header reveal">
+    <div class="section-tag">常见问题</div>
+    <h2 class="section-title">FAQ</h2>
+  </div>
+  <div class="faq-list">
+    <div class="faq-item reveal reveal-d1">
+      <div class="faq-q">Windows 提示"不受支持的应用"？</div>
+      <div class="faq-a">本软件为个人开发，未购买代码签名证书。点击对话框中的「更多信息」→「仍要运行」即可正常使用。</div>
+    </div>
+    <div class="faq-item reveal reveal-d2">
+      <div class="faq-q">杀毒软件误报怎么办？</div>
+      <div class="faq-a">部分杀毒软件（360、电脑管家等）可能误报。将软件加入白名单即可，软件不上传任何数据。</div>
+    </div>
+    <div class="faq-item reveal reveal-d3">
+      <div class="faq-q">支持 Mac 或 Linux 吗？</div>
+      <div class="faq-a">目前仅支持 Windows 10 / 11（64位）。Mac 和 Linux 版本正在开发中。</div>
+    </div>
+    <div class="faq-item reveal reveal-d4">
+      <div class="faq-q">如何反馈问题或建议？</div>
+      <div class="faq-a">欢迎在 GitHub 提交 Issue：<a href="https://github.com/GradPrep-win/880-auto-paper/issues">github.com/GradPrep-win/880-auto-paper/issues</a></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>880AutoPaper · 考研路上，与你同行 · <a href="https://github.com/GradPrep-win/880-auto-paper">GitHub</a></p>
+</footer>
+
+<script>
+// ── Reveal on scroll ──
+const revealObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('in');
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(function(el) {
+  revealObserver.observe(el);
+});
+
+// ── Progress bar + nav scroll ──
+var nav = document.getElementById('nav');
+var progressBar = document.getElementById('progressBar');
+
+window.addEventListener('scroll', function() {
+  var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  var progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = progress + '%';
+
+  if (scrollTop > 60) {
+    nav.classList.add('scrolled');
+  } else {
+    nav.classList.remove('scrolled');
+  }
+}, { passive: true });
+
+// ── Hero parallax ──
+var heroBg = document.querySelector('.hero-bg');
+window.addEventListener('scroll', function() {
+  if (heroBg && window.pageYOffset < window.innerHeight) {
+    heroBg.style.transform = 'translateX(-50%) translateY(' + (window.pageYOffset * 0.25) + 'px)';
+  }
+}, { passive: true });
+</script>
 
 </body>
 </html>
