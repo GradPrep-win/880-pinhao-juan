@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/jpeg" href="app-icon.jpg">
+  <title>880 拼好卷 - 抖音介绍页</title>
+  <style>
+    :root {
+      --bg: #050505;
+      --fg: #f5f5f7;
+      --muted: #a1a1aa;
+      --accent: #2997ff;
+      --accent-2: #ff9f0a;
+      --line: rgba(255, 255, 255, 0.12);
+      --panel: rgba(22, 22, 24, 0.76);
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #000; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--fg);
+      overflow: hidden;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(41, 151, 255, 0.24), transparent 34%),
+        radial-gradient(circle at 20% 88%, rgba(255, 159, 10, 0.14), transparent 26%),
+        linear-gradient(180deg, #070708 0%, #000 100%);
+      overflow: hidden;
+    }
+
+    .deck::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 72px 72px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.62), transparent 78%);
+      pointer-events: none;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: clamp(28px, 5vh, 72px) clamp(20px, 5vw, 64px);
+      opacity: 0;
+      transform: translateY(24px) scale(0.985);
+      pointer-events: none;
+      transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .stage {
+      position: relative;
+      width: min(100%, calc(100vh * 9 / 16));
+      height: min(100%, calc(100vw * 16 / 9));
+      max-width: 1080px;
+      max-height: 1920px;
+      aspect-ratio: 9 / 16;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 8.5% 7.2%;
+      isolation: isolate;
+    }
+
+    .brand-row {
+      position: absolute;
+      top: 4.8%;
+      left: 7.2%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(245,245,247,0.78);
+      font-size: clamp(13px, 2.2vmin, 22px);
+      font-weight: 600;
+    }
+
+    .brand-row img {
+      width: clamp(30px, 5.8vmin, 56px);
+      height: clamp(30px, 5.8vmin, 56px);
+      border-radius: 14px;
+      object-fit: cover;
+      box-shadow: 0 8px 28px rgba(41,151,255,0.35);
+    }
+
+    .index-mark {
+      position: absolute;
+      top: 4.9%;
+      right: 7.2%;
+      color: rgba(245,245,247,0.52);
+      font-size: clamp(12px, 2vmin, 20px);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(56px, 12vmin, 140px);
+      line-height: 1.06;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-wrap: balance;
+      color: #f5f5f7;
+      text-shadow: 0 12px 42px rgba(0,0,0,0.32);
+      animation: titleIn 0.82s var(--ease) both;
+    }
+
+    .title .accent { color: var(--accent-2); -webkit-text-fill-color: var(--accent-2); }
+    .title.small { font-size: clamp(54px, 10.5vmin, 126px); }
+
+    .hero-card {
+      margin-top: 12%;
+      width: 88%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: clamp(10px, 2.3vmin, 22px);
+      animation: riseIn 0.82s var(--ease) 0.18s both;
+    }
+
+    .metric {
+      min-height: clamp(86px, 15vmin, 160px);
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      padding: 14px 10px;
+      box-shadow: 0 22px 70px rgba(0,0,0,0.32);
+    }
+
+    .metric span { display: block; color: var(--accent); font-size: clamp(12px, 2.2vmin, 23px); font-weight: 700; }
+    .metric strong { display: block; margin-top: 6px; font-size: clamp(17px, 3.2vmin, 34px); font-weight: 700; }
+
+    .mock-window {
+      width: 100%;
+      margin-top: 10%;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(12, 12, 14, 0.84);
+      overflow: hidden;
+      box-shadow: 0 28px 90px rgba(0,0,0,0.52);
+      animation: riseIn 0.82s var(--ease) 0.14s both;
+    }
+
+    .mock-bar {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.045);
+    }
+
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,0.28); }
+
+    .mock-window img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top center;
+    }
+
+    .feature-strip {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: clamp(12px, 2.5vmin, 22px);
+      width: 100%;
+      margin-top: 8%;
+      animation: riseIn 0.82s var(--ease) 0.26s both;
+    }
+
+    .feature {
+      border-top: 1px solid rgba(41,151,255,0.45);
+      padding-top: 14px;
+      text-align: left;
+      color: rgba(245,245,247,0.88);
+      font-size: clamp(18px, 3.4vmin, 34px);
+      font-weight: 700;
+    }
+
+    .flow {
+      width: 100%;
+      margin-top: 12%;
+      display: grid;
+      gap: clamp(14px, 2.8vmin, 28px);
+      animation: riseIn 0.82s var(--ease) 0.18s both;
+    }
+
+    .flow-step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: clamp(14px, 3vmin, 30px);
+      border: 1px solid var(--line);
+      background: rgba(22,22,24,0.74);
+      border-radius: 18px;
+      padding: clamp(16px, 3.4vmin, 34px);
+      text-align: left;
+    }
+
+    .flow-num {
+      width: clamp(42px, 8vmin, 84px);
+      height: clamp(42px, 8vmin, 84px);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, var(--accent), #0066cc);
+      color: #fff;
+      font-size: clamp(18px, 3.2vmin, 34px);
+      font-weight: 800;
+      box-shadow: 0 10px 32px rgba(41,151,255,0.34);
+    }
+
+    .flow-text {
+      font-size: clamp(24px, 5vmin, 54px);
+      line-height: 1.22;
+      font-weight: 800;
+    }
+
+    .url-wrap {
+      width: 100%;
+      margin-top: 11%;
+      animation: riseIn 0.82s var(--ease) 0.16s both;
+    }
+
+    .url-box {
+      border: 1px solid rgba(41,151,255,0.36);
+      background: rgba(41,151,255,0.08);
+      border-radius: 22px;
+      padding: clamp(22px, 5.5vmin, 58px) clamp(18px, 4vmin, 48px);
+      color: #fff;
+      font-size: clamp(23px, 5.1vmin, 58px);
+      line-height: 1.25;
+      font-weight: 800;
+      box-shadow: 0 24px 80px rgba(41,151,255,0.18);
+    }
+
+    .url-box span { display: block; }
+
+    .repo {
+      margin-top: clamp(18px, 4vmin, 42px);
+      color: rgba(245,245,247,0.62);
+      font-size: clamp(14px, 2.7vmin, 28px);
+      word-break: break-word;
+    }
+
+    .footer-note {
+      position: absolute;
+      left: 7.2%;
+      right: 7.2%;
+      bottom: 5.2%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      color: rgba(245,245,247,0.5);
+      font-size: clamp(12px, 2vmin, 21px);
+    }
+
+    .progress {
+      position: absolute;
+      left: 7.2%;
+      right: 7.2%;
+      bottom: 9.4%;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 25%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      border-radius: inherit;
+      transition: width 0.45s var(--ease);
+    }
+
+    .controls {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.62);
+      backdrop-filter: blur(18px);
+      opacity: 0.2;
+      transition: opacity 0.24s ease;
+    }
+
+    .controls:hover,
+    .controls:focus-within { opacity: 1; }
+
+    body.clean .controls { display: none; }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 16px;
+      background: rgba(255,255,255,0.08);
+      color: var(--fg);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.primary { background: var(--accent); color: #fff; font-weight: 700; }
+
+    @keyframes titleIn {
+      from { opacity: 0; transform: translateY(34px); filter: blur(12px); }
+      to { opacity: 1; transform: translateY(0); filter: blur(0); }
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(26px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-aspect-ratio: 9 / 16) {
+      .stage { width: 100vw; height: calc(100vw * 16 / 9); }
+    }
+
+    @media (min-aspect-ratio: 9 / 16) {
+      .stage { height: 100vh; width: calc(100vh * 9 / 16); }
+    }
+
+    @media (max-width: 640px) {
+      .slide { padding: 0; }
+      .stage { padding-left: 7%; padding-right: 7%; }
+      .controls { bottom: 10px; transform: translateX(-50%) scale(0.92); }
+      .hero-card { width: 100%; gap: 8px; }
+      .feature-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-label="880 拼好卷抖音介绍演示">
+    <section class="slide active" aria-label="第一页">
+      <div class="stage">
+        <div class="brand-row"><img src="app-icon.jpg" alt=""><span>880AutoPaper</span></div>
+        <div class="index-mark">01 / 04</div>
+        <h1 class="title">880 拼好卷<br><span class="accent">自动组卷</span></h1>
+        <div class="progress"><span></span></div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="第二页">
+      <div class="stage">
+        <div class="brand-row"><img src="app-icon.jpg" alt=""><span>880AutoPaper</span></div>
+        <div class="index-mark">02 / 04</div>
+        <h1 class="title small">软件介绍</h1>
+        <div class="mock-window">
+          <div class="mock-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <img src="screenshot-latest-paper.png" alt="880 拼好卷试卷预览界面">
+        </div>
+        <div class="progress"><span></span></div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="第三页">
+      <div class="stage">
+        <div class="brand-row"><img src="app-icon.jpg" alt=""><span>880AutoPaper</span></div>
+        <div class="index-mark">03 / 04</div>
+        <h1 class="title small">下载使用</h1>
+        <div class="flow" aria-label="下载流程">
+          <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Watt Toolkit</div></div>
+          <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">GitHub</div></div>
+          <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Releases</div></div>
+          <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">下载 Windows 版</div></div>
+        </div>
+        <div class="progress"><span></span></div>
+        <div class="footer-note"><span>GitHub 打不开时，先开加速</span><span>解压即可使用</span></div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="第四页">
+      <div class="stage">
+        <div class="brand-row"><img src="app-icon.jpg" alt=""><span>880AutoPaper</span></div>
+        <div class="index-mark">04 / 04</div>
+        <h1 class="title small">下载网址</h1>
+        <div class="url-wrap">
+          <div class="url-box"><span>gradprep-win.github.io</span><span>/880-pinhao-juan/</span></div>
+          <div class="repo">GitHub：github.com/GradPrep-win/880-pinhao-juan</div>
+        </div>
+        <div class="hero-card" aria-label="下载特点">
+          <div class="metric"><span>免费</span><strong>直接下载</strong></div>
+          <div class="metric"><span>系统</span><strong>Win10/11</strong></div>
+          <div class="metric"><span>使用</span><strong>本地离线</strong></div>
+        </div>
+        <div class="progress"><span></span></div>
+        <div class="footer-note"><span>主页链接也可以获取最新版</span><span>880 拼好卷</span></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="controls" aria-label="演示控制">
+    <button type="button" id="prevBtn">上一页</button>
+    <button type="button" id="playBtn" class="primary">暂停</button>
+    <button type="button" id="nextBtn">下一页</button>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const progressBars = Array.from(document.querySelectorAll('.progress span'));
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const playBtn = document.getElementById('playBtn');
+    let current = 0;
+    let playing = true;
+    let timer = null;
+    const delay = 5200;
+
+    if (new URLSearchParams(window.location.search).get('clean') === '1') {
+      document.body.classList.add('clean');
+    }
+
+    function showSlide(index) {
+      current = (index + slides.length) % slides.length;
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+      progressBars.forEach((bar) => { bar.style.width = ((current + 1) / slides.length * 100) + '%'; });
+      restartTimer();
+    }
+
+    function restartTimer() {
+      window.clearInterval(timer);
+      if (playing) timer = window.setInterval(() => showSlide(current + 1), delay);
+    }
+
+    prevBtn.addEventListener('click', () => showSlide(current - 1));
+    nextBtn.addEventListener('click', () => showSlide(current + 1));
+    playBtn.addEventListener('click', () => {
+      playing = !playing;
+      playBtn.textContent = playing ? '暂停' : '播放';
+      restartTimer();
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowLeft') showSlide(current - 1);
+      if (event.key === 'ArrowRight') showSlide(current + 1);
+      if (event.key === ' ') {
+        event.preventDefault();
+        playBtn.click();
+      }
+    });
+
+    showSlide(0);
+  </script>
+</body>
+</html>
